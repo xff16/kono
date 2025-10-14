@@ -18,7 +18,7 @@ pipeline {
             steps {
                 sh 'mkdir -p build'
                 sh '/opt/homebrew/bin/go mod tidy'
-                sh '/opt/homebrew/bin/go build -o build/kairyu ./cmd/main'
+                sh '/opt/homebrew/bin/go build -o build/kairyu ./cmd/main.go'
             }
         }
 
