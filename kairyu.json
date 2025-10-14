@@ -1,0 +1,53 @@
+{
+  "schema": "v1",
+  "name": "Kairyu Gateway",
+  "version": "0.1",
+  "server": {
+    "port": 8080,
+    "timeout": 5000
+  },
+  "plugins": [
+    {
+      "name": "logger",
+      "config": {
+        "level": "info"
+      }
+    },
+    {
+      "name": "cors",
+      "config": {
+        "origins": [
+          "*"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "path": "/api/users",
+      "method": "GET",
+      "plugins": [
+        {
+          "name": "rate_limit",
+          "config": {
+            "limit": 10,
+            "window": 1
+          }
+        }
+      ],
+      "backends": [
+        {
+          "url": "http://user-service.local/v1/users",
+          "method": "GET",
+          "timeout": 3000
+        },
+        {
+          "url": "http://profile-service.local/v1/details",
+          "method": "GET"
+        }
+      ],
+      "aggregate": "merge",
+      "transform": "default"
+    }
+  ]
+}
