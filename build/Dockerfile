@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.6
+
 # Stage 1: Build TypeScript admin
 FROM node:20-alpine AS admin-builder
 
