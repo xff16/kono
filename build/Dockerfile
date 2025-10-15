@@ -1,10 +1,7 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.23-alpine AS builder
+FROM golang:1.24.2-alpine AS builder
 WORKDIR /app
-
-CMD [ "pwd" ]
-CMD [ "ls -l" ]
 
 COPY go.mod go.sum ./
 RUN go mod download
