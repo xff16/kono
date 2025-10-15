@@ -23,12 +23,9 @@ pipeline {
 
                         echo "$DOCKER_PASS" | /usr/local/bin/docker login -u "$DOCKER_USER" --password-stdin
 
-
-
-
-                        /usr/local/bin/docker buildx build --platform linux/amd64,linux/arm64 -f ./build/Dockerfile \
-                          -t $DOCKER_IMAGE:latest --push .
-
+                        DOCKER_BUILDKIT=1 /usr/local/bin/docker build --platform linux/amd64 -f ./build/Dockerfile \
+                        -t $DOCKER_IMAGE:latest .
+                        /usr/local/bin/docker push $DOCKER_IMAGE:latest
 
                         rm -rf $DOCKER_CONFIG
                     '''
