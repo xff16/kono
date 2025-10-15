@@ -30,6 +30,9 @@ pipeline {
                         mkdir -p $DOCKER_CONFIG
 
                         echo "$DOCKER_PASS" | /usr/local/bin/docker login -u "$DOCKER_USER" --password-stdin
+
+                        pwd
+
                         /usr/local/bin/docker build -f kairyu/build/Dockerfile -t $DOCKER_IMAGE:latest kairyu/
                         /usr/local/bin/docker push $DOCKER_IMAGE:latest
 
