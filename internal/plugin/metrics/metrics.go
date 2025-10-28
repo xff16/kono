@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/starwalkn/kairyu"
+	"github.com/starwalkn/bravka"
 )
 
 func init() {
-	kairyu.RegisterCorePlugin("metrics", NewPlugin)
+	bravka.RegisterCorePlugin("metrics", NewPlugin)
 }
 
 type Plugin struct {
@@ -19,7 +19,7 @@ type Plugin struct {
 	stopCh chan struct{}
 }
 
-func NewPlugin() kairyu.CorePlugin {
+func NewPlugin() bravka.CorePlugin {
 	return &Plugin{
 		counts: make(map[string]int),
 		stopCh: make(chan struct{}),
@@ -33,7 +33,7 @@ func (p *Plugin) Name() string {
 func (p *Plugin) Init(cfg map[string]interface{}) error {
 	intervalSec, ok := cfg["log_interval_sec"].(float64)
 	if !ok || intervalSec <= 0 {
-		intervalSec = 10 // дефолт 10 секунд
+		intervalSec = 10
 	}
 	p.ticker = time.NewTicker(time.Duration(intervalSec) * time.Second)
 	return nil
@@ -45,7 +45,6 @@ func (p *Plugin) Start() error {
 			select {
 			case <-p.ticker.C:
 				p.mu.Lock()
-				fmt.Println("=== Metrics ===")
 				for path, count := range p.counts {
 					fmt.Printf("%s: %d\n", path, count)
 				}

@@ -1,4 +1,4 @@
-package kairyu
+package bravka
 
 import "go.uber.org/zap"
 
@@ -11,10 +11,15 @@ type defaultAggregator struct {
 }
 
 func (a *defaultAggregator) aggregate(responses [][]byte, mode string) []byte {
+	var result []byte
+
 	switch mode {
 	case "merge":
 		return nil
 	case "array":
+		for _, response := range responses {
+			result = append(result, response...)
+		}
 		return nil
 	default:
 		return responses[0]

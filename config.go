@@ -1,58 +1,60 @@
-package kairyu
+package bravka
 
 import (
 	"encoding/json"
 	"log"
 	"os"
-	"sync"
-	"sync/atomic"
-)
-
-var (
-	currentConfig atomic.Value // Stores *GatewayConfig
-	currentRouter atomic.Value // Stores *Router
-	pluginsMu     sync.Mutex
-	activePlugins []CorePlugin
 )
 
 type GatewayConfig struct {
-	Schema     string             `json:"schema"`
-	Name       string             `json:"name"`
-	Version    string             `json:"version"`
-	Server     ServerConfig       `json:"server"`
-	AdminPanel AdminPanelConfig   `json:"admin_panel"`
-	Plugins    []CorePluginConfig `json:"plugins"`
-	Routes     []RouteConfig      `json:"routes"`
+	Schema    string             `json:"schema"`
+	Name      string             `json:"name"`
+	Version   string             `json:"version"`
+	Server    ServerConfig       `json:"server"`
+	Dashboard DashboardConfig    `json:"dashboard"`
+	Plugins   []CorePluginConfig `json:"plugins"`
+	Routes    []RouteConfig      `json:"routes"`
 }
 
 type ServerConfig struct {
 	Port    int `json:"port"`
 	Timeout int `json:"timeout"`
 }
-type AdminPanelConfig struct {
+type DashboardConfig struct {
 	Enable bool `json:"enable"`
 	Port   int  `json:"port"`
 }
 
 type RouteConfig struct {
-	Path      string          `json:"path"`
-	Method    string          `json:"method"`
-	Plugins   []PluginConfig  `json:"plugins"`
-	Backends  []BackendConfig `json:"backends"`
-	Aggregate string          `json:"aggregate"`
-	Transform string          `json:"transform"`
+	Path        string             `json:"path"`
+	Method      string             `json:"method"`
+	Plugins     []PluginConfig     `json:"plugins"`
+	Middlewares []MiddlewareConfig `json:"middlewares"`
+	Backends    []BackendConfig    `json:"backends"`
+	Aggregate   string             `json:"aggregate"`
+	Transform   string             `json:"transform"`
 }
 
 type BackendConfig struct {
-	URL     string `json:"url"`
-	Method  string `json:"method"`
-	Timeout int    `json:"timeout"`
+	URL                 string            `json:"url"`
+	Method              string            `json:"method"`
+	Timeout             int64             `json:"timeout"`
+	Headers             map[string]string `json:"headers"`
+	ForwardHeaders      []string          `json:"forward_headers"`
+	ForwardQueryStrings []string          `json:"forward_query_strings"`
 }
 
 type PluginConfig struct {
 	Name   string                 `json:"name"`
 	Path   string                 `json:"path,omitempty"`
 	Config map[string]interface{} `json:"config"`
+}
+
+type MiddlewareConfig struct {
+	Name          string                 `json:"name"`
+	Path          string                 `json:"path,omitempty"`
+	Config        map[string]interface{} `json:"config"`
+	CanFailOnLoad bool                   `json:"can_fail_on_load"`
 }
 
 type CorePluginConfig struct {
@@ -85,54 +87,7 @@ func LoadConfig(path string) GatewayConfig {
 		if err = p.Start(); err != nil {
 			log.Fatal("failed to start core plugin:", err)
 		}
-
-		activePlugins = append(activePlugins, p)
 	}
 
 	return cfg
-}
-
-func ReloadConfig(path string) error {
-	cfg := LoadConfig(path)
-
-	newPlugins := make([]CorePlugin, 0, len(cfg.Plugins))
-	for _, pcfg := range cfg.Plugins {
-		p, err := initCorePlugin(pcfg)
-		if err != nil {
-			log.Println("failed to init core plugin:", err)
-			return err
-		}
-
-		if err = p.Start(); err != nil {
-			log.Println("failed to start core plugin:", err)
-			return err
-		}
-
-		newPlugins = append(newPlugins, p)
-	}
-
-	router := NewRouter(cfg.Routes)
-
-	pluginsMu.Lock()
-	oldPlugins := activePlugins
-	pluginsMu.Unlock()
-
-	for _, op := range oldPlugins {
-		if err := op.Stop(); err != nil {
-			log.Println("failed to stop old core plugin:", err)
-			return err
-		}
-	}
-
-	pluginsMu.Lock()
-	activePlugins = newPlugins
-	pluginsMu.Unlock()
-
-	currentConfig.Store(&cfg)
-	currentRouter.Store(&router)
-
-	log.Printf("configuration reloaded: %d routes, %d core plugins",
-		len(cfg.Routes), len(newPlugins))
-
-	return nil
 }

@@ -1,5 +1,5 @@
 services:
-  kairyu:
+  bravka:
     build:
       context: .
       dockerfile: build/Dockerfile
@@ -9,6 +9,6 @@ services:
       - '8090:8090'
       - '8095:8095'
     volumes:
-      - ./kairyu.json:/app/kairyu.json
+      - ./bravka.json:/app/bravka.json
     environment:
-      KAIRYU_CONFIG: ./kairyu.json
+      BRAVKA_CONFIG: ./bravka.json

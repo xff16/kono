@@ -1,4 +1,4 @@
-module github.com/starwalkn/kairyu
+module github.com/starwalkn/bravka
 
 go 1.24.2
 

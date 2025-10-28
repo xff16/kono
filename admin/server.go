@@ -1,33 +1,44 @@
 package admin
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"path/filepath"
+	"time"
 
-	"github.com/starwalkn/kairyu"
+	"go.uber.org/zap"
+
+	"github.com/starwalkn/bravka"
+	"github.com/starwalkn/bravka/internal/logger"
 )
 
-func StartServer(cfg *kairyu.GatewayConfig) {
-	if !cfg.AdminPanel.Enable {
-		fmt.Printf("📊 Admin dashboard disabled\n")
-		return
-	}
+type Server struct {
+	cfg *bravka.GatewayConfig
+	log *zap.Logger
+}
 
+func NewServer(cfg *bravka.GatewayConfig) *Server {
+	return &Server{
+		cfg: cfg,
+		log: logger.Init(true).Named("admin-panel"),
+	}
+}
+
+func (s *Server) Start() {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(cfg)
-	})
+	addr := fmt.Sprintf(":%d", s.cfg.Dashboard.Port)
 
-	staticDir := filepath.Join("/", "app", "admin", "static")
-	fs := http.FileServer(http.Dir(staticDir))
-	mux.Handle("/", fs)
+	server := http.Server{
+		Addr:         addr,
+		Handler:      mux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+	}
 
-	addr := fmt.Sprintf(":%d", cfg.AdminPanel.Port)
-	fmt.Printf("📊 Admin dashboard available at http://localhost%s\n", addr)
+	s.log.Info("📊 Admin dashboard started\n", zap.String("addr", addr))
 
-	go http.ListenAndServe(addr, mux)
+	if err := server.ListenAndServe(); err != nil {
+		s.log.Error("admin server had errors, disabling", zap.Error(err))
+		return
+	}
 }

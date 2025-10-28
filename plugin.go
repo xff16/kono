@@ -1,9 +1,7 @@
-package kairyu
+package bravka
 
 import (
-	"fmt"
-	"log"
-	"plugin"
+	"go.uber.org/zap"
 )
 
 type Plugin interface {
@@ -47,40 +45,11 @@ func createCorePlugin(name string) CorePlugin {
 	return nil
 }
 
-func initCorePlugin(cfg CorePluginConfig) (CorePlugin, error) {
-	p := createCorePlugin(cfg.Name)
-	if p == nil {
-		return nil, fmt.Errorf("core plugin %s not found", cfg.Name)
-	}
+func loadPluginFromSO(path string, cfg map[string]any, log *zap.Logger) Plugin {
+	factory := loadSymbol[func() Plugin](path, "NewPlugin", log)
 
-	if err := p.Init(cfg.Config); err != nil {
-		return nil, err
-	}
+	plugin := factory()
+	plugin.Init(cfg)
 
-	return p, nil
-}
-
-func loadPluginFromSO(path string) Plugin {
-	p, err := plugin.Open(path)
-	if err != nil {
-		log.Printf("failed to open plugin %s: %v", path, err)
-		return nil
-	}
-
-	sym, err := p.Lookup("NewPlugin")
-	if err != nil {
-		log.Printf("plugin %s does not export NewPlugin: %v", path, err)
-		return nil
-	}
-
-	factory, ok := sym.(func() Plugin)
-	if !ok {
-		log.Printf("plugin %s: NewPlugin has wrong signature", path)
-		return nil
-	}
-
-	pl := factory()
-	log.Printf("plugin %s loaded successfully", pl.Name())
-
-	return pl
+	return plugin
 }

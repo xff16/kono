@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME = "kairyu"
-        DOCKER_IMAGE = "starwalkn/kairyu"
+        APP_NAME = "branka"
+        DOCKER_IMAGE = "starwalkn/branka"
     }
 
     stages {
@@ -31,7 +31,7 @@ pipeline {
                         /usr/local/bin/docker buildx build \
                             --platform linux/amd64,linux/arm64 \
                             -f ./build/Dockerfile \
-                            -t starwalkn/kairyu:latest \
+                            -t starwalkn/bravka:latest \
                             --push .
                         /usr/local/bin/docker push $DOCKER_IMAGE:latest
 

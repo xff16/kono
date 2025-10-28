@@ -1,12 +1,12 @@
 {
   "schema": "v1",
-  "name": "Kairyu Gateway",
+  "name": "Bravka Gateway",
   "version": "0.1",
   "server": {
     "port": 8090,
     "timeout": 5000
   },
-  "admin_panel": {
+  "dashboard": {
     "enable": true,
     "port": 8095
   },
@@ -23,10 +23,16 @@
     {
       "path": "/api/users",
       "method": "GET",
+      "middlewares": [
+        {
+          "name": "recoverer",
+          "path": "/bravka/middlewares/recoverer.so"
+        }
+      ],
       "plugins": [
         {
           "name": "logger",
-          "path": "/plugins/logger.so",
+          "path": "/bravka/plugins/logger.so",
           "config": {
             "level": "debug"
           }
@@ -36,11 +42,20 @@
         {
           "url": "http://user-service.local/v1/users",
           "method": "GET",
-          "timeout": 3000
+          "timeout": 3000,
+          "forward_query_strings": [
+            "*"
+          ],
+          "forward_headers": [
+            "*"
+          ]
         },
         {
           "url": "http://profile-service.local/v1/details",
-          "method": "GET"
+          "method": "GET",
+          "forward_headers": [
+            "X-Request-ID"
+          ]
         }
       ],
       "aggregate": "merge",
@@ -52,7 +67,7 @@
       "plugins": [
         {
           "name": "logger",
-          "path": "/plugins/logger.so",
+          "path": "/bravka/plugins/logger.so",
           "config": {
             "level": "debug"
           }

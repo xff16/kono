@@ -1,0 +1,87 @@
+schema: v1
+name: bravka Gateway
+version: "0.1"
+
+server:
+  port: 8090
+  timeout: 5000
+
+dashboard:
+  enable: true
+  port: 8095
+
+plugins:
+  - name: ratelimit
+    config:
+      limit: 10
+      window: 1
+
+routes:
+  - path: /api/users
+    method: GET
+    middlewares:
+      - name: recoverer
+        path: /bravka/middlewares/recoverer.so
+        can_fail_on_load: true
+    plugins:
+      - name: logger
+        path: /bravka/plugins/logger.so
+        config:
+          level: debug
+    backends:
+      - url: http://user-service.local/v1/users
+        method: GET
+        timeout: 3000
+        forward_query_strings:
+          - "*"
+        forward_headers:
+          - "*"
+      - url: http://profile-service.local/v1/details
+        method: GET
+        forward_headers:
+          - X-Request-ID
+    aggregate: merge
+    transform: default
+
+  - path: /api/domains
+    method: GET
+    middlewares: [ ]
+    plugins:
+      - name: logger
+        path: /bravka/plugins/logger.so
+        config:
+          level: debug
+    backends:
+      - url: http://domain-service.local/v1/domains
+        method: GET
+        timeout: 3000
+      - url: http://profile-service.local/v1/details
+        method: GET
+    aggregate: merge
+    transform: default
+
+  - path: /api/domains
+    method: POST
+    middlewares: [ ]
+    plugins: [ ]
+    backends:
+      - url: http://domain-service.local/v1/domains
+        method: POST
+        timeout: 1000
+      - url: http://profile-service.local/v1/details
+        method: GET
+    aggregate: array
+    transform: default
+
+  - path: /api/domains
+    method: DELETE
+    middlewares: [ ]
+    plugins: [ ]
+    backends:
+      - url: http://domain-service.local/v1/domains
+        method: DELETE
+        timeout: 2000
+      - url: http://profile-service.local/v1/details
+        method: GET
+    aggregate: array
+    transform: default

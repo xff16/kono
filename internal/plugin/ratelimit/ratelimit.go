@@ -4,11 +4,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/starwalkn/kairyu"
+	"github.com/starwalkn/bravka"
 )
 
 func init() {
-	kairyu.RegisterCorePlugin("ratelimit", NewPlugin)
+	bravka.RegisterCorePlugin("ratelimit", NewPlugin)
 }
 
 type Plugin struct {
@@ -20,7 +20,7 @@ type Plugin struct {
 	stopCh  chan struct{}
 }
 
-func NewPlugin() kairyu.CorePlugin {
+func NewPlugin() bravka.CorePlugin {
 	return &Plugin{}
 }
 
