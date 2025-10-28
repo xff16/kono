@@ -78,6 +78,7 @@ func NewRouter(cfgs []RouteConfig) *Router {
 			plugins = append(plugins, soPlugin)
 		}
 
+		// --- middlewares ---
 		middlewares := make([]Middleware, 0, len(cfg.Middlewares))
 		for _, mcfg := range cfg.Middlewares {
 			soMiddleware := loadMiddlewareFromSO(mcfg.Path, mcfg.Config, log)

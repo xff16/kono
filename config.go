@@ -4,62 +4,65 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
 type GatewayConfig struct {
-	Schema    string             `json:"schema"`
-	Name      string             `json:"name"`
-	Version   string             `json:"version"`
-	Server    ServerConfig       `json:"server"`
-	Dashboard DashboardConfig    `json:"dashboard"`
-	Plugins   []CorePluginConfig `json:"plugins"`
-	Routes    []RouteConfig      `json:"routes"`
+	Schema    string             `json:"schema" yaml:"schema"`
+	Name      string             `json:"name" yaml:"name"`
+	Version   string             `json:"version" yaml:"version"`
+	Server    ServerConfig       `json:"server" yaml:"server"`
+	Dashboard DashboardConfig    `json:"dashboard" yaml:"dashboard"`
+	Plugins   []CorePluginConfig `json:"plugins" yaml:"plugins"`
+	Routes    []RouteConfig      `json:"routes" yaml:"routes"`
 }
 
 type ServerConfig struct {
-	Port    int `json:"port"`
-	Timeout int `json:"timeout"`
+	Port    int `json:"port" yaml:"port"`
+	Timeout int `json:"timeout" yaml:"timeout"`
 }
 type DashboardConfig struct {
-	Enable bool `json:"enable"`
-	Port   int  `json:"port"`
+	Enable bool `json:"enable" yaml:"enable"`
+	Port   int  `json:"port" yaml:"port"`
 }
 
 type RouteConfig struct {
-	Path        string             `json:"path"`
-	Method      string             `json:"method"`
-	Plugins     []PluginConfig     `json:"plugins"`
-	Middlewares []MiddlewareConfig `json:"middlewares"`
-	Backends    []BackendConfig    `json:"backends"`
-	Aggregate   string             `json:"aggregate"`
-	Transform   string             `json:"transform"`
+	Path        string             `json:"path" yaml:"path"`
+	Method      string             `json:"method" yaml:"method"`
+	Plugins     []PluginConfig     `json:"plugins" yaml:"plugins"`
+	Middlewares []MiddlewareConfig `json:"middlewares" yaml:"middlewares"`
+	Backends    []BackendConfig    `json:"backends" yaml:"backends"`
+	Aggregate   string             `json:"aggregate" yaml:"aggregate"`
+	Transform   string             `json:"transform" yaml:"transform"`
 }
 
 type BackendConfig struct {
-	URL                 string            `json:"url"`
-	Method              string            `json:"method"`
-	Timeout             int64             `json:"timeout"`
-	Headers             map[string]string `json:"headers"`
-	ForwardHeaders      []string          `json:"forward_headers"`
-	ForwardQueryStrings []string          `json:"forward_query_strings"`
+	URL                 string            `json:"url" yaml:"url"`
+	Method              string            `json:"method" yaml:"method"`
+	Timeout             int64             `json:"timeout" yaml:"timeout"`
+	Headers             map[string]string `json:"headers" yaml:"headers"`
+	ForwardHeaders      []string          `json:"forward_headers" yaml:"forward_headers"`
+	ForwardQueryStrings []string          `json:"forward_query_strings" yaml:"forward_query_strings"`
 }
 
 type PluginConfig struct {
-	Name   string                 `json:"name"`
-	Path   string                 `json:"path,omitempty"`
-	Config map[string]interface{} `json:"config"`
+	Name   string                 `json:"name" yaml:"name"`
+	Path   string                 `json:"path,omitempty" yaml:"path,omitempty"`
+	Config map[string]interface{} `json:"config" yaml:"config"`
 }
 
 type MiddlewareConfig struct {
-	Name          string                 `json:"name"`
-	Path          string                 `json:"path,omitempty"`
-	Config        map[string]interface{} `json:"config"`
-	CanFailOnLoad bool                   `json:"can_fail_on_load"`
+	Name          string                 `json:"name" yaml:"name"`
+	Path          string                 `json:"path,omitempty" yaml:"path,omitempty"`
+	Config        map[string]interface{} `json:"config" yaml:"config"`
+	CanFailOnLoad bool                   `json:"can_fail_on_load" yaml:"can_fail_on_load"`
 }
 
 type CorePluginConfig struct {
-	Name   string                 `json:"name"`
-	Config map[string]interface{} `json:"config"`
+	Name   string                 `json:"name" yaml:"name"`
+	Config map[string]interface{} `json:"config" yaml:"config"`
 }
 
 func LoadConfig(path string) GatewayConfig {
@@ -69,10 +72,21 @@ func LoadConfig(path string) GatewayConfig {
 	}
 
 	var cfg GatewayConfig
-	if err = json.Unmarshal(data, &cfg); err != nil {
-		log.Fatal("failed to parse json:", err)
+
+	switch filepath.Ext(path) {
+	case ".json":
+		if err = json.Unmarshal(data, &cfg); err != nil {
+			log.Fatal("failed to parse json:", err)
+		}
+	case ".yaml", ".yml":
+		if err = yaml.Unmarshal(data, &cfg); err != nil {
+			log.Fatal("failed to parse yaml:", err)
+		}
+	default:
+		log.Fatal("unknown config file extension:", filepath.Ext(path))
 	}
 
+	// Loading core-level plugins.
 	for _, pcfg := range cfg.Plugins {
 		p := createCorePlugin(pcfg.Name)
 		if p == nil {

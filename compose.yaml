@@ -9,6 +9,6 @@ services:
       - '8090:8090'
       - '8095:8095'
     volumes:
-      - ./bravka.json:/app/bravka.json
+      - ./bravka.yaml:/app/bravka.yaml
     environment:
-      BRAVKA_CONFIG: ./bravka.json
+      BRAVKA_CONFIG: ./bravka.yaml
