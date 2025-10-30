@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
+//nolint:gocogint // normal for tests
 func TestDefaultAggregator_Aggregate(t *testing.T) {
 	logger := zap.NewNop()
 	agg := &defaultAggregator{log: logger}

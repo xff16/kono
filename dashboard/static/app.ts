@@ -1,4 +1,4 @@
-// main.ts — TypeScript for admin UI (tabs, fetch, render, accordion, filter, refresh, editor)
+// main.ts — TypeScript for dashboard UI (tabs, fetch, render, accordion, filter, refresh, editor)
 
 interface AdminConfig { enable: boolean; port: number; }
 interface PluginConfig {

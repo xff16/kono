@@ -25,8 +25,9 @@ type ServerConfig struct {
 }
 
 type DashboardConfig struct {
-	Enable bool `json:"enable" yaml:"enable"`
-	Port   int  `json:"port" yaml:"port"`
+	Enable  bool `json:"enable" yaml:"enable"`
+	Port    int  `json:"port" yaml:"port"`
+	Timeout int  `json:"timeout" yaml:"timeout"`
 }
 
 type RouteConfig struct {

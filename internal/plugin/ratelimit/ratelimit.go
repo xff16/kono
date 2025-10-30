@@ -7,7 +7,6 @@ import (
 	"github.com/starwalkn/bravka"
 )
 
-//nolint:gochecknoinits // architectural solution
 func init() {
 	bravka.RegisterCorePlugin("ratelimit", NewPlugin)
 }

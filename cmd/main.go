@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/starwalkn/bravka"
-	"github.com/starwalkn/bravka/admin"
+	"github.com/starwalkn/bravka/dashboard"
 
 	_ "github.com/starwalkn/bravka/internal/plugin/ratelimit"
 )
@@ -22,7 +22,7 @@ func main() {
 	cfg := bravka.LoadConfig(cfgPath)
 
 	if cfg.Dashboard.Enable {
-		adminServer := admin.NewServer(&cfg)
+		adminServer := dashboard.NewServer(&cfg)
 		go adminServer.Start()
 	}
 

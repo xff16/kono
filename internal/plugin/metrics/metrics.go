@@ -46,6 +46,7 @@ func (p *Plugin) Start() error {
 			case <-p.ticker.C:
 				p.mu.Lock()
 				for path, count := range p.counts {
+					//nolint:forbidigo // stub implementation
 					fmt.Printf("%s: %d\n", path, count)
 				}
 				p.mu.Unlock()

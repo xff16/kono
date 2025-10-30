@@ -32,6 +32,7 @@ type CorePlugin interface {
 	Stop() error                           // остановка/отключение при reload/shutdown
 }
 
+//nolint:gochecknoglobals // non concurrently uses
 var coreRegistry = make(map[string]func() CorePlugin)
 
 func RegisterCorePlugin(name string, factory func() CorePlugin) {

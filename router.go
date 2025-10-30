@@ -22,21 +22,25 @@ type Router struct {
 func NewRouter(cfgs []RouteConfig) *Router {
 	log := logger.New(true)
 
-	var (
-		router = &Router{
-			dispatcher: &defaultDispatcher{},
-			aggregator: &defaultAggregator{},
-			Routes:     nil,
-			log:        log,
-		}
+	router := &Router{
+		dispatcher: &defaultDispatcher{
+			client: &http.Client{},
+			log:    log.Named("dispatcher"),
+		},
+		aggregator: &defaultAggregator{
+			log: log.Named("aggregator"),
+		},
+		Routes: nil,
+		log:    log,
+	}
 
-		routes = make([]Route, 0, len(cfgs))
-	)
+	routes := make([]Route, 0, len(cfgs))
 
 	for _, cfg := range cfgs {
 		// --- backends ---
 		backends := make([]Backend, 0, len(cfg.Backends))
 		for _, bcfg := range cfg.Backends {
+			//nolint:staticcheck // backend structure may change
 			backend := Backend{
 				URL:                 bcfg.URL,
 				Method:              bcfg.Method,
@@ -252,6 +256,6 @@ func copyResponse(w http.ResponseWriter, resp *http.Response) {
 	}
 	w.WriteHeader(resp.StatusCode)
 	if resp.Body != nil {
-		io.Copy(w, resp.Body)
+		_, _ = io.Copy(w, resp.Body)
 	}
 }

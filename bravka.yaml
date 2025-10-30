@@ -9,6 +9,7 @@ server:
 dashboard:
   enable: true
   port: 8095
+  timeout: 5000
 
 plugins:
   - name: ratelimit

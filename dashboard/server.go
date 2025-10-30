@@ -1,4 +1,4 @@
-package admin
+package dashboard
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ type Server struct {
 func NewServer(cfg *bravka.GatewayConfig) *Server {
 	return &Server{
 		cfg: cfg,
-		log: logger.New(true).Named("admin-panel"),
+		log: logger.New(true).Named("dashboard"),
 	}
 }
 
@@ -31,14 +31,14 @@ func (s *Server) Start() {
 	server := http.Server{
 		Addr:         addr,
 		Handler:      mux,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
+		ReadTimeout:  time.Duration(s.cfg.Dashboard.Timeout) * time.Second,
+		WriteTimeout: time.Duration(s.cfg.Dashboard.Timeout) * time.Second,
 	}
 
-	s.log.Info("📊 Admin dashboard started\n", zap.String("addr", addr))
+	s.log.Info("📊 Dashboard server started\n", zap.String("addr", addr))
 
 	if err := server.ListenAndServe(); err != nil {
-		s.log.Error("admin server had errors, disabling", zap.Error(err))
+		s.log.Error("dashboard server had errors, disabling", zap.Error(err))
 		return
 	}
 }
