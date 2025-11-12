@@ -15,7 +15,7 @@ func TestCompressorMiddleware_Gzip(t *testing.T) {
 		alg:     "gzip",
 	}
 
-	handler := m.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := m.Handler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte("hello gzip"))
 	}))
 
@@ -51,7 +51,7 @@ func TestCompressorMiddleware_Deflate(t *testing.T) {
 		alg:     "deflate",
 	}
 
-	handler := m.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := m.Handler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte("hello deflate"))
 	}))
 
@@ -84,7 +84,7 @@ func TestCompressorMiddleware_NoEncodingHeader(t *testing.T) {
 		alg:     "gzip",
 	}
 
-	handler := m.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := m.Handler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte("plain text"))
 	}))
 

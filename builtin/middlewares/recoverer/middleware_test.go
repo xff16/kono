@@ -54,7 +54,7 @@ func TestRecovererMiddleware_NoPanic(t *testing.T) {
 	buf := new(bytes.Buffer)
 	m := &Middleware{
 		enabled: true,
-		log: newTestLogger(buf),
+		log:     newTestLogger(buf),
 	}
 	handler := m.Handler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
