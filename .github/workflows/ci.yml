@@ -84,14 +84,15 @@ jobs:
 
           BADGE="![coverage](https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR}.svg)"
 
-          # Обновляем README.md
           sed -i '/!\[coverage\]/c\'"$BADGE" README.md
 
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md
-          git commit -m "Update coverage badge"
-          git push
+          git commit -m "Update coverage badge" || echo "No changes to commit"
+
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+          git push origin HEAD:main
 
   lint:
     if: startsWith(github.ref, 'refs/tags/v') != true
