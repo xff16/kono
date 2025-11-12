@@ -22,34 +22,42 @@ func NewMiddleware() bravka.Middleware {
 	return &Middleware{}
 }
 
-func (p *Middleware) Name() string {
+func (m *Middleware) Name() string {
 	return "recoverer"
 }
 
-func (p *Middleware) Init(cfg map[string]interface{}) error {
+func (m *Middleware) Init(cfg map[string]interface{}) error {
 	if val, ok := cfg["enabled"].(bool); ok {
-		p.enabled = val
+		m.enabled = val
 	}
 
-	p.log = logger.New(true)
+	if val, ok := cfg["include_stack"].(bool); ok {
+		m.includeStack = val
+	}
+
+	m.log = logger.New(true)
 
 	return nil
 }
 
-func (p *Middleware) Handler(next http.Handler) http.Handler {
+func (m *Middleware) Handler(next http.Handler) http.Handler {
+	if !m.enabled {
+		return next
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
 				now := time.Now()
 				msg := fmt.Sprintf("panic recovered: %v", rec)
 
-				log := p.log.With(
+				log := m.log.With(
 					zap.String("method", r.Method),
 					zap.String("path", r.URL.Path),
 					zap.Time("time", now),
 				)
 
-				if p.includeStack {
+				if m.includeStack {
 					log.Error(msg, zap.ByteString("stack", debug.Stack()))
 				} else {
 					log.Error(msg)

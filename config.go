@@ -104,6 +104,8 @@ func LoadConfig(path string) GatewayConfig {
 		if err = p.Start(); err != nil {
 			log.Fatal("failed to start core plugin:", err)
 		}
+
+		RegisterActiveCore(pcfg.Name, p)
 	}
 
 	return cfg

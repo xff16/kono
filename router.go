@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/starwalkn/bravka/internal/logger"
+	"github.com/starwalkn/bravka/internal/plugin/contract"
 )
 
 type Router struct {
@@ -158,6 +159,21 @@ ServeHTTP is the incoming requests pipeline:
 	└─ write response
 */
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// --- 0. Global (core) plugins, e.g. rate limiter ---
+	if rl := GetCorePlugin("ratelimit"); rl != nil { //nolint:nolintlint,nestif
+		if limiter, ok := rl.(contract.RateLimit); ok {
+			ip := req.Header.Get("X-Forwarded-For")
+			if ip == "" {
+				ip = req.RemoteAddr
+			}
+
+			if !limiter.Allow(ip) {
+				http.Error(w, `{"error":"rate limit exceeded"}`, http.StatusTooManyRequests)
+				return
+			}
+		}
+	}
+
 	rt := r.match(req)
 	if rt == nil {
 		r.log.Error("no route found", zap.String("request_uri", req.URL.RequestURI()))
@@ -167,10 +183,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var routeHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		pctx := &Context{
-			Request: req,
-			Route:   rt,
-		}
+		pctx := newContext(req, rt)
 
 		// --- 1. Request-phase plugins ---
 		for _, p := range rt.Plugins {
@@ -182,9 +195,9 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 			p.Execute(pctx)
 
-			if pctx.Response != nil && pctx.Response.StatusCode == http.StatusTooManyRequests {
+			if pctx.Response() != nil && pctx.Response().StatusCode == http.StatusTooManyRequests { //nolint:bodyclose // body closes in copyResponse
 				r.log.Warn("too many requests", zap.String("request_uri", req.URL.RequestURI()))
-				copyResponse(w, pctx.Response)
+				copyResponse(w, pctx.Response()) //nolint:bodyclose // body closes in copyResponse
 
 				return
 			}
@@ -209,8 +222,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			Header:     make(http.Header),
 		}
 
-		pctx.Response = resp
-
+		pctx.SetResponse(resp)
 		for _, p := range rt.Plugins {
 			if p.Type() != PluginTypeResponse {
 				continue
@@ -222,7 +234,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// --- 4. Write final output ---
-		copyResponse(w, pctx.Response)
+		copyResponse(w, pctx.Response()) //nolint:bodyclose // body closes in copyResponse
 	})
 
 	for i := len(rt.Middlewares) - 1; i >= 0; i-- {
@@ -257,5 +269,7 @@ func copyResponse(w http.ResponseWriter, resp *http.Response) {
 	w.WriteHeader(resp.StatusCode)
 	if resp.Body != nil {
 		_, _ = io.Copy(w, resp.Body)
+
+		_ = resp.Body.Close()
 	}
 }

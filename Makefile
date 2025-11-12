@@ -13,7 +13,8 @@ build:
 
 plugins:
 	mkdir -p $(PLUGIN_OUT)
-	CGO_ENABLED=1 go build -buildmode=plugin -o $(PLUGIN_OUT)/logger.so ./builtin/plugins/logger/plugin.go
+	mkdir -p $(MIDDLEWARE_OUT)
+	CGO_ENABLED=1 go build -buildmode=plugin -o $(MIDDLEWARE_OUT)/logger.so ./builtin/middlewares/logger/middleware.go
 	CGO_ENABLED=1 go build -buildmode=plugin -o $(MIDDLEWARE_OUT)/recoverer.so ./builtin/middlewares/recoverer/middleware.go
 
 clean:
@@ -21,3 +22,6 @@ clean:
 
 lint:
 	golangci-lint run
+
+test:
+	go test -coverprofile=coverage.out ./...

@@ -24,11 +24,9 @@ routes:
       - name: recoverer
         path: /bravka/middlewares/recoverer.so
         can_fail_on_load: true
-    plugins:
       - name: logger
-        path: /bravka/plugins/logger.so
-        config:
-          level: debug
+        path: /bravka/middlewares/logger.so
+        can_fail_on_load: false
     backends:
       - url: http://user-service.local/v1/users
         method: GET
@@ -48,11 +46,6 @@ routes:
   - path: /api/domains
     method: GET
     middlewares: [ ]
-    plugins:
-      - name: logger
-        path: /bravka/plugins/logger.so
-        config:
-          level: debug
     backends:
       - url: http://domain-service.local/v1/domains
         method: GET
