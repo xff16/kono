@@ -13,91 +13,10 @@ env:
   GOLANGCI_LINT_VERSION: v2.1
 
 jobs:
-  test:
+  checks:
     if: startsWith(github.ref, 'refs/tags/v') != true
 
-    name: Test and Coverage
-    runs-on: ubuntu-22.04
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Install gocovmerge (for merging coverage)
-        run: |
-          go install github.com/wadey/gocovmerge@latest
-          echo "$GOPATH/bin" >> $GITHUB_PATH
-
-      - name: Run tests with coverage
-        run: |
-          pkgs=$(go list ./... | grep -v '/cmd/' | grep -v '/dashboard/' | grep -v '/internal/')
-          echo "Testing packages: $pkgs"
-          
-          mkdir -p coverage
-          
-          for pkg in $pkgs; do
-            file="coverage/$(echo $pkg | tr / -).cover.out"
-            echo "Testing $pkg -> $file"
-            go test -v -coverprofile="$file" "$pkg" || echo "Tests failed for $pkg"
-          done
-
-          gocovmerge coverage/*.cover.out > coverage/coverage.out
-
-          go tool cover -func=coverage/coverage.out
-
-      - name: Upload coverage report as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage.out
-
-      - name: Generate coverage badge
-        run: |
-          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
-          PERCENT=${COVERAGE%.*}
-          COLOR="red"
-          if [ "$PERCENT" -ge 90 ]; then COLOR="brightgreen"; fi
-          if [ "$PERCENT" -ge 75 ] && [ "$PERCENT" -lt 90 ]; then COLOR="yellow"; fi
-          echo "coverage: $COVERAGE%"
-          echo "![coverage](https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR}.svg)" > coverage-badge.md
-
-      - name: Upload coverage badge
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-badge
-          path: coverage-badge.md
-
-      - name: Update README with coverage badge
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          COVERAGE=$(go tool cover -func=coverage/coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
-          PERCENT=${COVERAGE%.*}
-          COLOR="red"
-          if [ "$PERCENT" -ge 90 ]; then COLOR="brightgreen"; fi
-          if [ "$PERCENT" -ge 75 ] && [ "$PERCENT" -lt 90 ]; then COLOR="yellow"; fi
-
-          BADGE="![coverage](https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR}.svg)"
-
-          sed -i '/!\[coverage\]/c\'"$BADGE" README.md
-
-          git config --local user.name "github-actions[bot]"
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          git commit -m "Update coverage badge" || echo "No changes to commit"
-
-          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
-          git push origin HEAD:main
-
-  lint:
-    if: startsWith(github.ref, 'refs/tags/v') != true
-
-    name: Lint
+    name: Test and Lint
     runs-on: ubuntu-22.04
 
     steps:
@@ -107,6 +26,9 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
+
+      - name: Test
+        run: go test -v ./...
 
       - name: Lint
         uses: golangci/golangci-lint-action@v8.0.0
