@@ -22,10 +22,12 @@ func New(debug bool) *zap.Logger {
 	encoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 
 	config := zap.Config{
-		Level:         zap.NewAtomicLevelAt(lvl),
-		Development:   debug,
-		Encoding:      "json",
-		EncoderConfig: encoderConfig,
+		Level:            zap.NewAtomicLevelAt(lvl),
+		Development:      debug,
+		Encoding:         "json",
+		EncoderConfig:    encoderConfig,
+		OutputPaths:      []string{"stdout"},
+		ErrorOutputPaths: []string{"stderr"},
 	}
 
 	log, err := config.Build()

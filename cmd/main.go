@@ -40,9 +40,9 @@ func main() {
 		log.Fatal("server error", zap.Error(err))
 	}
 
+	log.Info("server is closed")
+
 	if err := log.Sync(); err != nil {
 		log.Warn("cannot sync log", zap.Error(err))
 	}
-
-	log.Info("server is closed")
 }
