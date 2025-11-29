@@ -6,20 +6,16 @@ import (
 )
 
 func New(debug bool) *zap.Logger {
-	var (
-		lvl           zapcore.Level
-		encoderConfig zapcore.EncoderConfig
-	)
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
+
+	var lvl zapcore.Level
 
 	if debug {
 		lvl = zap.DebugLevel
-		encoderConfig = zap.NewDevelopmentEncoderConfig()
 	} else {
 		lvl = zap.InfoLevel
-		encoderConfig = zap.NewProductionEncoderConfig()
 	}
-
-	encoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 
 	config := zap.Config{
 		Level:            zap.NewAtomicLevelAt(lvl),
