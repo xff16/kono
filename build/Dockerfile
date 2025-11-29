@@ -11,7 +11,12 @@ COPY . .
 RUN make all
 
 # Stage 2: Final minimal image
+FROM busybox:1.35.0-uclibc as busybox
 FROM gcr.io/distroless/base-debian12 AS runtime
+
+COPY --from=busybox /bin/sh /bin/sh
+COPY --from=busybox /bin/mkdir /bin/mkdir
+COPY --from=busybox /bin/cat /bin/cat
 
 WORKDIR /app
 

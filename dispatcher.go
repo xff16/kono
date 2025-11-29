@@ -89,12 +89,6 @@ func (d *defaultDispatcher) dispatch(route *Route, original *http.Request) [][]b
 				d.log.Warn("cannot close backend response body", zap.Error(reqErr))
 			}
 
-			// if m := getActiveCorePlugin("metrics"); m != nil { //nolint:nolintlint,nestif
-			// 	if metrics, ok := m.(contract.Metrics); ok {
-			// 		metrics.ObserveBackend(route.Path, b.URL, b.Method, time.Since(start), resp.StatusCode)
-			// 	}
-			// }
-
 			results[i] = body
 		}(i, b, originalBody)
 	}
