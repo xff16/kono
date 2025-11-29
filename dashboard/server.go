@@ -8,7 +8,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/starwalkn/tokka"
-	"github.com/starwalkn/tokka/internal/logger"
 )
 
 type Server struct {
@@ -16,10 +15,10 @@ type Server struct {
 	log *zap.Logger
 }
 
-func NewServer(cfg *tokka.GatewayConfig) *Server {
+func NewServer(cfg *tokka.GatewayConfig, log *zap.Logger) *Server {
 	return &Server{
 		cfg: cfg,
-		log: logger.New(cfg.Debug).Named("dashboard"),
+		log: log,
 	}
 }
 

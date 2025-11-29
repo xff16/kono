@@ -8,7 +8,6 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/starwalkn/tokka/internal/logger"
 	"github.com/starwalkn/tokka/internal/plugin/contract"
 )
 
@@ -40,9 +39,7 @@ type Backend struct {
 	ForwardQueryStrings []string
 }
 
-func NewRouter(cfgs []RouteConfig, globalMiddlewareCfgs []MiddlewareConfig, debug bool) *Router {
-	log := logger.New(debug)
-
+func NewRouter(cfgs []RouteConfig, globalMiddlewareCfgs []MiddlewareConfig, log *zap.Logger) *Router {
 	// --- global middlewares ---
 	globalMiddlewareIndices, globalMiddlewares := initGlobalMiddlewares(globalMiddlewareCfgs, log)
 
