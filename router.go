@@ -43,16 +43,20 @@ type Backend struct {
 }
 
 func newDefaultRouter(routesCount int, log *zap.Logger) *Router {
+	metrics := metric.New()
+
 	return &Router{
 		dispatcher: &defaultDispatcher{
-			client: &http.Client{},
-			log:    log.Named("dispatcher"),
+			client:  &http.Client{},
+			log:     log.Named("dispatcher"),
+			metrics: metrics,
 		},
 		aggregator: &defaultAggregator{
 			log: log.Named("aggregator"),
 		},
-		Routes: make([]Route, 0, routesCount),
-		log:    log,
+		Routes:  make([]Route, 0, routesCount),
+		log:     log,
+		metrics: metrics,
 	}
 }
 func NewRouter(cfgs []RouteConfig, globalMiddlewareCfgs []MiddlewareConfig, log *zap.Logger) *Router {

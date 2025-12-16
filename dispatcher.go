@@ -10,8 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/starwalkn/tokka/internal/metric"
 	"go.uber.org/zap"
+
+	"github.com/starwalkn/tokka/internal/metric"
 )
 
 type dispatcher interface {
