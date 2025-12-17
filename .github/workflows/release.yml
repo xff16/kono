@@ -7,7 +7,7 @@ on:
 
 jobs:
   docker-amd64:
-    name: Docker Build and Push (amd64)
+    name: Docker Build and Push
     runs-on: ubuntu-22.04
 
     steps:
@@ -18,7 +18,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: starwalkn/tokka
-          tags: type=semver,pattern={{version}}-amd64
+          tags: type=semver,pattern={{version}}
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -32,77 +32,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build amd64 and push
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           file: build/Dockerfile
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           github-token: ${{ github.token }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-  docker-arm64:
-    name: Docker Build and Push (arm64)
-    runs-on: ubuntu-22.04-arm
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: starwalkn/tokka
-          tags: type=semver,pattern={{version}}-arm64
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build amd64 and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: build/Dockerfile
-          platforms: linux/arm64
-          github-token: ${{ github.token }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-  docker-manifest:
-    needs: [docker-amd64, docker-arm64]
-    runs-on: ubuntu-22.04
-
-    steps:
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Create and push manifest
-        run: |
-          VERSION=${GITHUB_REF_NAME#v}
-
-          docker manifest create starwalkn/tokka:${VERSION} \
-            starwalkn/tokka:${VERSION}-amd64 \
-            starwalkn/tokka:${VERSION}-arm64
-
-          docker manifest push starwalkn/tokka:${VERSION}
-
-          docker manifest create starwalkn/tokka:latest \
-            starwalkn/tokka:${VERSION}-amd64 \
-            starwalkn/tokka:${VERSION}-arm64
-
-          docker manifest push starwalkn/tokka:latest
