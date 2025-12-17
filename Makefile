@@ -1,5 +1,5 @@
 GOOS=linux
-GOARCH=amd64
+GOARCH=arm64
 PLUGIN_OUT=build/plugins
 MIDDLEWARE_OUT=build/middlewares
 
@@ -14,9 +14,9 @@ build:
 plugins:
 	mkdir -p $(PLUGIN_OUT)
 	mkdir -p $(MIDDLEWARE_OUT)
-	CGO_ENABLED=1 go build -buildmode=plugin -o $(MIDDLEWARE_OUT)/logger.so ./builtin/middlewares/logger/middleware.go
-	CGO_ENABLED=1 go build -buildmode=plugin -o $(MIDDLEWARE_OUT)/recoverer.so ./builtin/middlewares/recoverer/middleware.go
-	CGO_ENABLED=1 go build -buildmode=plugin -o $(MIDDLEWARE_OUT)/compressor.so ./builtin/middlewares/compressor/middleware.go
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 go build -buildmode=plugin -o $(MIDDLEWARE_OUT)/logger.so ./builtin/middlewares/logger/middleware.go
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 go build -buildmode=plugin -o $(MIDDLEWARE_OUT)/recoverer.so ./builtin/middlewares/recoverer/middleware.go
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 go build -buildmode=plugin -o $(MIDDLEWARE_OUT)/compressor.so ./builtin/middlewares/compressor/middleware.go
 
 	CGO_ENABLED=1 go build -buildmode=plugin -o $(PLUGIN_OUT)/camelify.so ./builtin/plugins/camelify/plugin.go
 	CGO_ENABLED=1 go build -buildmode=plugin -o $(PLUGIN_OUT)/snakeify.so ./builtin/plugins/snakeify/plugin.go
