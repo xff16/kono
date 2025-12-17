@@ -40,6 +40,7 @@ func (a *defaultAggregator) aggregate(responses [][]byte, mode string, allowPart
 
 		return res
 	default:
+		a.log.Error("unknown aggregation strategy", zap.String("strategy", mode))
 		return nil
 	}
 }
