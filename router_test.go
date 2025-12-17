@@ -59,7 +59,7 @@ func TestRouter_ServeHTTP_BasicFlow(t *testing.T) {
 				Backends:  []Backend{{URL: "mock1"}, {URL: "mock2"}},
 			},
 		},
-		log: zap.NewNop(),
+		log:     zap.NewNop(),
 		metrics: metric.New(),
 	}
 
@@ -83,8 +83,8 @@ func TestRouter_ServeHTTP_BasicFlow(t *testing.T) {
 
 func TestRouter_ServeHTTP_NoRoute(t *testing.T) {
 	r := &Router{
-		Routes: nil,
-		log:    zap.NewNop(),
+		Routes:  nil,
+		log:     zap.NewNop(),
 		metrics: metric.New(),
 	}
 
@@ -131,7 +131,7 @@ func TestRouter_ServeHTTP_WithPlugins(t *testing.T) {
 				Aggregate: "join",
 			},
 		},
-		log: zap.NewNop(),
+		log:     zap.NewNop(),
 		metrics: metric.New(),
 	}
 
@@ -168,7 +168,7 @@ func TestRouter_ServeHTTP_WithMiddleware(t *testing.T) {
 				Middlewares: []Middleware{&mockMiddleware{}},
 			},
 		},
-		log: zap.NewNop(),
+		log:     zap.NewNop(),
 		metrics: metric.New(),
 	}
 
