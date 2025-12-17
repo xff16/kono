@@ -8,7 +8,10 @@ RUN go mod download
 
 COPY . .
 
-RUN make all
+ARG TARGETOS
+ARG TARGETARCH
+
+RUN make all GOOS=${TARGETOS} GOARCH=${TARGETARCH}
 
 # Stage 2: Final minimal image
 FROM debian:12-slim AS runtime
