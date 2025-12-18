@@ -22,12 +22,12 @@ func TestAggregator_Merge_Success(t *testing.T) {
 
 	gotBytes := agg.aggregate(responses, strategyMerge, false)
 
-	var got map[string]interface{}
+	var got map[string]any
 	if err := json.Unmarshal(gotBytes, &got); err != nil {
 		t.Fatalf("failed to unmarshal result: %v", err)
 	}
 
-	want := map[string]interface{}{
+	want := map[string]any{
 		"a": float64(1),
 		"b": float64(3),
 		"c": float64(4),
@@ -48,12 +48,12 @@ func TestAggregator_Merge_PartialAllowed(t *testing.T) {
 
 	gotBytes := agg.aggregate(responses, strategyMerge, true)
 
-	var got map[string]interface{}
+	var got map[string]any
 	if err := json.Unmarshal(gotBytes, &got); err != nil {
 		t.Fatalf("failed to unmarshal result: %v", err)
 	}
 
-	want := map[string]interface{}{
+	want := map[string]any{
 		"a": float64(1),
 	}
 
@@ -86,12 +86,12 @@ func TestAggregator_Array_Success(t *testing.T) {
 
 	gotBytes := agg.aggregate(responses, strategyArray, false)
 
-	var got []map[string]interface{}
+	var got []map[string]any
 	if err := json.Unmarshal(gotBytes, &got); err != nil {
 		t.Fatalf("failed to unmarshal array: %v", err)
 	}
 
-	want := []map[string]interface{}{
+	want := []map[string]any{
 		{"x": float64(1)},
 		{"y": float64(2)},
 	}

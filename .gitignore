@@ -21,9 +21,6 @@ go.work.sum
 # Binaries directory
 .bin
 
-# Local configuration files
-.local
-
 # Built middlewares and plugins
 build/middlewares
 build/plugins
