@@ -211,6 +211,9 @@ ServeHTTP is the incoming requests pipeline:
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
 
+	r.metrics.IncRequestsInFlight()
+	defer r.metrics.DecRequestsInFlight()
+
 	defer r.metrics.IncRequestsTotal()
 	defer r.metrics.UpdateRequestsDuration(start)
 
@@ -282,6 +285,8 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 			p.Execute(tctx)
 		}
+
+		r.metrics.IncResponsesTotal(tctx.Response().StatusCode) //nolint:bodyclose // body closes in copyResponse
 
 		// --- 4. Write final output ---
 		copyResponse(w, tctx.Response()) //nolint:bodyclose // body closes in copyResponse

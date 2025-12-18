@@ -23,6 +23,12 @@ build/k8s
 .local
 
 !build/Dockerfile
+!build/dashboard/Dockerfile
+!dashboard
 
 # JetBrains IDEs
 .idea
+
+**/node_modules
+**/dist
+.git

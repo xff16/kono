@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"go.uber.org/zap"
@@ -26,18 +27,15 @@ func NewServer(cfg *tokka.GatewayConfig, log *zap.Logger) *Server {
 func (s *Server) Start() {
 	mux := http.NewServeMux()
 
+	staticDir := filepath.Join("/", "dashboard", "static")
+	mux.Handle("/", http.FileServer(http.Dir(staticDir)))
+
 	mux.HandleFunc("/config", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		cfgBytes, err := json.Marshal(s.cfg)
-		if err != nil {
-			s.log.Error("cannot marshal config", zap.Error(err))
-			http.Error(w, "cannot marshal config", http.StatusInternalServerError)
-		}
-
-		//nolint:errcheck,gosec // ignore error
-		w.Write(cfgBytes)
+		//nolint:errcheck,gosec // its ok
+		json.NewEncoder(w).Encode(s.cfg)
 	})
 
 	addr := fmt.Sprintf(":%d", s.cfg.Dashboard.Port)
