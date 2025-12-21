@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/static/img/logo_50.jpg" alt="Логотип проекта" width="150"/>
+  <img src="docs/static/img/cover_white.jpg" alt="Логотип проекта" width="150"/>
 </p>
 
 <h1 align="center">Tokka API Gateway</h1>
