@@ -16,7 +16,7 @@ COPY dashboard/static/fonts ./fonts
 RUN npx tsc
 
 # Stage 2: Build Go tokka binary
-FROM golang:1.24.2-bullseye AS builder
+FROM golang:1.25.4-bullseye AS builder
 
 WORKDIR /app
 
