@@ -230,6 +230,9 @@ server:
   port: 7805
   timeout: 5000
   enable_metrics: true
+  metrics:
+    enabled: true
+    provider: victoriametrics
 
 dashboard:
   enable: true
@@ -254,6 +257,16 @@ middlewares:
     can_fail_on_load: false
     config:
       enabled: true
+    
+  - name: auth
+    path: /tokka/middlewares/auth.so
+    can_fail_on_load: false
+    config:
+      enabled: true
+      issuer: fake_issuer
+      audience: fake_audience
+      alg: HS256
+      hmac_secret: fake_hmac_secret
 
 routes:
   - path: /api/users
@@ -371,7 +384,11 @@ routes:
   "server": {
     "port": 7805,
     "timeout": 5000,
-    "enable_metrics": true
+    "enable_metrics": true,
+    "metrics": {
+      "enabled": true,
+      "provider": "victoriametrics"
+    }
   },
 
   "dashboard": {
@@ -405,6 +422,18 @@ routes:
       "can_fail_on_load": false,
       "config": {
         "enabled": true
+      }
+    },
+    {
+      "name": "auth",
+      "path": "/tokka/middlewares/auth.so",
+      "can_fail_on_load": false,
+      "config": {
+        "enabled": true,
+        "issuer": "fake_issuer",
+        "audience": "fake_audience",
+        "alg": "HS256",
+        "hmac_secret": "fake_hmac_secret"
       }
     }
   ],
@@ -562,6 +591,10 @@ port = 7805
 timeout = 5000
 enable_metrics = true
 
+[server.metrics]
+enabled = true
+provider = "victoriametrics"
+
 [dashboard]
 enable = true
 port = 7806
@@ -589,6 +622,18 @@ can_fail_on_load = false
 
 [middlewares.config]
 enabled = true
+
+[[middlewares]]
+name = "auth"
+path = "/tokka/middlewares/auth.so"
+can_fail_on_load = false
+
+[middlewares.config]
+enabled = true
+issuer = fake_issuer
+audience = fake_audience
+alg = HS256
+hmac_secret = fake_hmac_secret
 
 [[routes]]
 path = "/api/users"

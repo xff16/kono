@@ -44,11 +44,6 @@ name = "auth"
 path = "/tokka/middlewares/auth.so"
 can_fail_on_load = false
 
-[[middlewares]]
-name = "cors"
-path = "/tokka/middlewares/cors.so"
-can_fail_on_load = false
-
 [middlewares.config]
 enabled = true
 issuer = fake_issuer
