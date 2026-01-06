@@ -6,7 +6,10 @@ debug = false
 [server]
 port = 7805
 timeout = 5000
-enable_metrics = true
+
+[server.metrics]
+enabled = true
+provider = "victoriametrics"
 
 [dashboard]
 enable = true

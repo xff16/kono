@@ -38,12 +38,13 @@ func main() {
 		Routes:      cfg.Routes,
 		Middlewares: cfg.Middlewares,
 		Features:    cfg.Features,
+		Metrics:     cfg.Server.Metrics,
 	}
 	mainRouter := tokka.NewRouter(routerConfigSet, log.Named("router"))
 
 	mux := http.NewServeMux()
 
-	if cfg.Server.EnableMetrics {
+	if cfg.Server.Metrics.Enabled {
 		mux.Handle("/metrics", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			metrics.WritePrometheus(w, true)
 		}))

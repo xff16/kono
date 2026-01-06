@@ -37,7 +37,7 @@ type Route struct {
 }
 
 func newDefaultRouter(routesCount int, log *zap.Logger) *Router {
-	metrics := metric.NewVictoria()
+	metrics := metric.NewNop()
 
 	return &Router{
 		dispatcher: &defaultDispatcher{
@@ -59,6 +59,7 @@ type RouterConfigSet struct {
 	Routes      []RouteConfig
 	Middlewares []MiddlewareConfig
 	Features    []FeatureConfig
+	Metrics     MetricsConfig
 }
 
 func NewRouter(routerConfigSet RouterConfigSet, log *zap.Logger) *Router {
@@ -66,12 +67,22 @@ func NewRouter(routerConfigSet RouterConfigSet, log *zap.Logger) *Router {
 		routeConfigs            = routerConfigSet.Routes
 		globalMiddlewareConfigs = routerConfigSet.Middlewares
 		featureConfigs          = routerConfigSet.Features
+		metricsConfig           = routerConfigSet.Metrics
 	)
 
 	// Global middlewares.
 	globalMiddlewareIndices, globalMiddlewares := initGlobalMiddlewares(globalMiddlewareConfigs, log)
 
 	router := newDefaultRouter(len(routeConfigs), log)
+
+	if metricsConfig.Enabled {
+		switch metricsConfig.Provider {
+		case "victoriametrics":
+			router.metrics = metric.NewVictoria()
+		default:
+			router.metrics = metric.NewNop()
+		}
+	}
 
 	for _, fcfg := range featureConfigs {
 		//nolint:gocritic // for the future
