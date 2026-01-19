@@ -27,19 +27,65 @@ type defaultAggregator struct {
 	log *zap.Logger
 }
 
+// aggregate combines multiple upstream responses according to the specified strategy.
+//
+// If there is only one upstream response, it is returned as-is via rawResponse,
+// and the aggregation strategy (mode) is ignored.
+//
+// If there are multiple responses, the aggregation strategy determines how they
+// are combined:
+//   - "merge": merge the JSON objects into a single object
+//   - "array": combine the responses into a JSON array
+//
+// If the strategy is unknown, an empty AggregatedResponse is returned and an error
+// is logged. Upstream errors are handled according to allowPartialResults:
+//
+//   - allowPartialResults = true: successful responses are aggregated, errors are
+//     included in the Errors field, Partial = true
+//   - allowPartialResults = false: any upstream error or JSON parse error results
+//     in an immediate AggregatedResponse containing a mapped error and Partial = false
 func (a *defaultAggregator) aggregate(responses []UpstreamResponse, mode string, allowPartialResults bool) AggregatedResponse {
+	if len(responses) == 1 {
+		return a.rawResponse(responses)
+	}
+
 	switch mode {
 	case strategyMerge:
-		return a.doMerge(responses, allowPartialResults)
+		return a.mergeResponses(responses, allowPartialResults)
 	case strategyArray:
-		return a.doArray(responses, allowPartialResults)
+		return a.arrayOfResponses(responses, allowPartialResults)
 	default:
 		a.log.Error("unknown aggregation strategy", zap.String("strategy", mode))
 		return AggregatedResponse{}
 	}
 }
 
-func (a *defaultAggregator) doMerge(responses []UpstreamResponse, allowPartialResults bool) AggregatedResponse {
+func (a *defaultAggregator) rawResponse(responses []UpstreamResponse) AggregatedResponse {
+	if len(responses) > 1 {
+		return internalAggregationError()
+	}
+
+	resp := responses[0]
+	if resp.Err != nil {
+		return AggregatedResponse{
+			Data:    nil,
+			Errors:  []JSONError{a.mapUpstreamError(resp.Err)},
+			Partial: false,
+		}
+	}
+
+	if resp.Body == nil {
+		return AggregatedResponse{}
+	}
+
+	return AggregatedResponse{
+		Data:    resp.Body,
+		Errors:  nil,
+		Partial: false,
+	}
+}
+
+func (a *defaultAggregator) mergeResponses(responses []UpstreamResponse, allowPartialResults bool) AggregatedResponse {
 	merged := make(map[string]any)
 
 	var aggregationErrors []JSONError
@@ -47,43 +93,50 @@ func (a *defaultAggregator) doMerge(responses []UpstreamResponse, allowPartialRe
 	for _, resp := range responses {
 		var obj map[string]any
 
+		// Handle upstream error.
+		if resp.Err != nil {
+			mapped := a.mapUpstreamError(resp.Err)
+
+			a.log.Warn(
+				"upstream has errors",
+				zap.Bool("allow_partial_results", allowPartialResults),
+				zap.String("upstream_error", resp.Err.Unwrap().Error()),
+				zap.String("mapped_error", mapped.Message),
+			)
+
+			if !allowPartialResults {
+				return AggregatedResponse{
+					Data:    nil,
+					Errors:  []JSONError{mapped},
+					Partial: false,
+				}
+			}
+
+			aggregationErrors = append(aggregationErrors, mapped)
+
+			continue
+		}
+
 		if resp.Body == nil {
 			continue
 		}
 
-		// Handle upstream error.
-		if resp.Err != nil {
-			if !allowPartialResults {
-				return internalAggregationError()
-			} else {
-				aggregationErrors = append(aggregationErrors, a.mapUpstreamError(resp.Err))
-
-				a.log.Warn(
-					"failed to unmarshal response",
-					zap.Bool("allow_partial_results", allowPartialResults),
-					zap.Error(resp.Err),
-				)
-
-				continue
-			}
-		}
-
 		// Handle JSON unmarshaling error as internal.
 		if err := json.Unmarshal(resp.Body, &obj); err != nil {
-			if !allowPartialResults {
-				return internalAggregationError()
-			}
-
-			aggregationErrors = append(aggregationErrors, JSONError{
-				Code:    ErrorCodeInternal,
-				Message: "server error",
-			})
-
 			a.log.Warn(
 				"failed to unmarshal response",
 				zap.Bool("allow_partial_results", allowPartialResults),
 				zap.Error(err),
 			)
+
+			if !allowPartialResults {
+				return jsonParseError()
+			}
+
+			aggregationErrors = append(aggregationErrors, JSONError{
+				Code:    ErrorCodeUpstreamMalformed,
+				Message: "upstream malformed",
+			})
 
 			continue
 		}
@@ -105,30 +158,37 @@ func (a *defaultAggregator) doMerge(responses []UpstreamResponse, allowPartialRe
 	return aggregationResponse
 }
 
-func (a *defaultAggregator) doArray(responses []UpstreamResponse, allowPartialResults bool) AggregatedResponse {
+func (a *defaultAggregator) arrayOfResponses(responses []UpstreamResponse, allowPartialResults bool) AggregatedResponse {
 	var arr []json.RawMessage
 
 	var aggregationErrors []JSONError
 
 	for _, resp := range responses {
-		if resp.Body == nil {
+		// Handle upstream error.
+		if resp.Err != nil {
+			mapped := a.mapUpstreamError(resp.Err)
+
+			a.log.Warn(
+				"upstream has errors",
+				zap.Bool("allow_partial_results", allowPartialResults),
+				zap.String("upstream_error", resp.Err.Unwrap().Error()),
+				zap.String("mapped_error", mapped.Message),
+			)
+
+			if !allowPartialResults {
+				return AggregatedResponse{
+					Data:    nil,
+					Errors:  []JSONError{mapped},
+					Partial: false,
+				}
+			}
+
+			aggregationErrors = append(aggregationErrors, mapped)
+
 			continue
 		}
 
-		// Handle upstream error.
-		if resp.Err != nil {
-			if !allowPartialResults {
-				return internalAggregationError()
-			}
-
-			aggregationErrors = append(aggregationErrors, a.mapUpstreamError(resp.Err))
-
-			a.log.Warn(
-				"failed to unmarshal response",
-				zap.Bool("allow_partial_results", allowPartialResults),
-				zap.Error(resp.Err),
-			)
-
+		if resp.Body == nil {
 			continue
 		}
 
@@ -137,7 +197,7 @@ func (a *defaultAggregator) doArray(responses []UpstreamResponse, allowPartialRe
 
 	data, err := json.Marshal(arr)
 	if err != nil {
-		return internalAggregationError()
+		return jsonParseError()
 	}
 
 	aggregationResponse := AggregatedResponse{
@@ -159,7 +219,7 @@ func (a *defaultAggregator) mapUpstreamError(err error) JSONError {
 		}
 	}
 
-	switch ue.Kind {
+	switch ue.Kind { //nolint:exhaustive // will be in future releases
 	case UpstreamTimeout, UpstreamConnection:
 		return JSONError{
 			Code:    ErrorCodeUpstreamUnavailable,
@@ -184,7 +244,20 @@ func internalAggregationError() AggregatedResponse {
 		Errors: []JSONError{
 			{
 				Code:    ErrorCodeInternal,
-				Message: "internal error",
+				Message: "server error",
+			},
+		},
+		Partial: false,
+	}
+}
+
+func jsonParseError() AggregatedResponse {
+	return AggregatedResponse{
+		Data: nil,
+		Errors: []JSONError{
+			{
+				Code:    ErrorCodeUpstreamMalformed,
+				Message: "upstream malformed",
 			},
 		},
 		Partial: false,

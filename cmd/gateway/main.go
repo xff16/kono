@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"go.uber.org/zap"
 
 	"github.com/VictoriaMetrics/metrics"
+
 	"github.com/starwalkn/tokka"
 	"github.com/starwalkn/tokka/dashboard"
 	"github.com/starwalkn/tokka/internal/logger"
@@ -23,10 +23,6 @@ func main() {
 
 	cfg := tokka.LoadConfig(cfgPath)
 	log := logger.New(cfg.Debug)
-
-	if err := cfg.Validate(); err != nil {
-		log.Fatal("config validation error", zap.Error(err))
-	}
 
 	if cfg.Dashboard.Enable {
 		dashboardServer := dashboard.NewServer(&cfg, log.Named("dashboard"))
@@ -55,8 +51,8 @@ func main() {
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:      mux,
-		ReadTimeout:  time.Duration(cfg.Server.Timeout) * time.Second,
-		WriteTimeout: time.Duration(cfg.Server.Timeout) * time.Second,
+		ReadTimeout:  cfg.Server.Timeout,
+		WriteTimeout: cfg.Server.Timeout,
 	}
 
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

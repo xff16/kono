@@ -2,6 +2,7 @@ package tokka
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -253,17 +254,30 @@ func initPlugins(cfgs []PluginConfig, log *zap.Logger) []Plugin {
 	return plugins
 }
 
-/*
-ServeHTTP is the incoming requests pipeline:
-
-	├─ execute middlewares
-	├─ match route
-	├─ execute request plugins
-	├─ dispatch upstreams
-	├─ aggregate response
-	├─ execute response plugins
-	└─ write response
-*/
+// ServeHTTP handles incoming HTTP requests through the full router pipeline.
+//
+// The processing steps are:
+//
+// 1. Rate limiting (if enabled) – rejects requests exceeding allowed limits.
+// 2. Route matching – finds a Route that matches the request method and path.
+//    - If no route is found, responds with 404.
+// 3. Middleware execution – wraps the route handler with all configured middlewares in reverse order.
+// 4. Request-phase plugins – executed before upstream dispatch. Can modify the request context.
+// 5. Upstream dispatch – sends the request to all configured upstreams via the dispatcher.
+//    - If the dispatch fails (e.g., body too large), responds with an appropriate error.
+// 6. Response aggregation – combines multiple upstream responses according to the route's aggregation strategy
+//    ("merge" or "array") and the allowPartialResults flag.
+// 7. Response-phase plugins – executed after aggregation, can modify headers or the response body.
+// 8. Response writing – writes the aggregated response, appropriate HTTP status code, and headers
+//    to the client.
+//
+// Status code determination:
+//
+// - 200 OK: all upstreams succeeded, no errors.
+// - 206 Partial Content: allowPartialResults=true, at least one upstream failed.
+// - 500 Internal Server Error: allowPartialResults=false, at least one upstream failed.
+//
+// The final response always includes a JSON body with `data` and `errors` fields, and a `X-Request-ID` header.
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
 
@@ -325,25 +339,49 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 		// Aggregate upstream responses.
 		aggregated := r.aggregator.aggregate(responses, rt.Aggregate, rt.AllowPartialResults)
+		attachRequestID(aggregated.Errors, requestID)
 
 		r.log.Debug("aggregated responses",
 			zap.String("strategy", rt.Aggregate),
 			zap.Any("aggregated", aggregated),
 		)
 
+		var responseBody []byte
+
 		status := http.StatusOK
 		switch {
 		case len(aggregated.Errors) > 0 && !aggregated.Partial:
 			status = http.StatusInternalServerError
+
+			responseBody = mustMarshal(JSONResponse{
+				Data:   nil,
+				Errors: aggregated.Errors,
+			})
 		case aggregated.Partial:
 			status = http.StatusPartialContent
+
+			responseBody = mustMarshal(JSONResponse{
+				Data:   aggregated.Data,
+				Errors: aggregated.Errors,
+			})
+		default:
+			responseBody = mustMarshal(JSONResponse{
+				Data:   aggregated.Data,
+				Errors: nil,
+			})
+		}
+
+		headers := http.Header{
+			"X-Request-ID": []string{requestID},
+			"Content-Type": []string{"application/json; charset=utf-8"},
 		}
 
 		// Response-phase plugins.
 		resp := &http.Response{
+			Status:     fmt.Sprintf("%d %s", status, http.StatusText(status)),
 			StatusCode: status,
-			Body:       io.NopCloser(bytes.NewReader(aggregated.Data)),
-			Header:     make(http.Header),
+			Body:       io.NopCloser(bytes.NewReader(responseBody)),
+			Header:     headers,
 		}
 
 		tctx.SetResponse(resp)
@@ -389,7 +427,7 @@ func (r *Router) match(req *http.Request) *Route {
 func copyResponse(w http.ResponseWriter, resp *http.Response) {
 	for k, vv := range resp.Header {
 		for _, v := range vv {
-			w.Header().Add(k, v)
+			w.Header().Set(k, v)
 		}
 	}
 
@@ -398,4 +436,20 @@ func copyResponse(w http.ResponseWriter, resp *http.Response) {
 		_, _ = io.Copy(w, resp.Body)
 		_ = resp.Body.Close()
 	}
+}
+
+func attachRequestID(errs []JSONError, requestID string) {
+	for i := range errs {
+		errs[i].RequestID = requestID
+	}
+}
+
+// mustMarshal marshals the given value to JSON.
+func mustMarshal(v any) []byte {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return []byte(`{"errors":[{"code":"internal","message":"internal error"}]}`)
+	}
+
+	return b
 }

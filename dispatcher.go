@@ -24,7 +24,32 @@ type defaultDispatcher struct {
 	metrics metric.Metrics
 }
 
-// dispatch dispatches the incoming request to the upstreams and returns their responses.
+// dispatch sends the incoming request to all upstreams configured for the given route
+// and collects their responses. It applies the upstream policies and metrics, and returns
+// a slice of UpstreamResponse.
+//
+// The dispatching pipeline is as follows:
+//
+// 1. Reads and limits the request body to `maxBodySize` (default 5MB).
+//    - If the body exceeds the limit, returns nil to indicate failure.
+// 2. Launches a goroutine for each upstream, sending the request concurrently.
+// 3. Each upstream response is validated against its policy:
+//    - AllowedStatuses: the response status must be in the allowed list.
+//    - RequireBody: the response must have a non-empty body if required.
+//    - MapStatusCodes: optionally remaps status codes.
+// 4. Any policy violations are converted to UpstreamError and metrics are updated.
+// 5. All upstream responses are written to a preallocated slice at their respective index.
+// 6. The dispatcher waits for all goroutines to complete before returning the results.
+//
+// Notes / considerations:
+//
+// - This dispatcher reads the full request body into memory for each upstream.
+//   Large bodies or many upstreams may increase memory usage significantly.
+// - Returns nil for body read errors or size violations, which must be checked by the caller.
+// - Goroutines write directly to a shared slice; current implementation is safe because
+//   each index is unique, but panics in goroutines may affect stability.
+// - No global timeout is applied; dispatcher relies on the request context for cancellation.
+// - Errors are aggregated using errors.Join, which may become large for multiple violations.
 func (d *defaultDispatcher) dispatch(route *Route, original *http.Request) []UpstreamResponse {
 	results := make([]UpstreamResponse, len(route.Upstreams))
 
@@ -55,7 +80,7 @@ func (d *defaultDispatcher) dispatch(route *Route, original *http.Request) []Ups
 			resp := u.Call(original.Context(), original, originalBody, upstreamPolicy.RetryPolicy)
 			if resp.Err != nil {
 				d.metrics.IncFailedRequestsTotal(metric.FailReasonUpstreamError)
-				d.log.Error("cannot call upstream",
+				d.log.Error("upstream request failed",
 					zap.String("name", u.Name()),
 					zap.Error(resp.Err.Unwrap()),
 				)

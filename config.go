@@ -2,16 +2,18 @@ package tokka
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"log"
-	"net/url"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/BurntSushi/toml"
 	"gopkg.in/yaml.v3"
+)
+
+const (
+	defaultUpstreamTimeout time.Duration = 3 * time.Second
+	defaultServerTimeout   time.Duration = 5 * time.Second
 )
 
 type GatewayConfig struct {
@@ -28,7 +30,7 @@ type GatewayConfig struct {
 
 type ServerConfig struct {
 	Port    int           `json:"port" yaml:"port" toml:"port"`
-	Timeout int           `json:"timeout" yaml:"timeout" toml:"timeout"`
+	Timeout time.Duration `json:"timeout" yaml:"timeout" toml:"timeout"`
 	Metrics MetricsConfig `json:"metrics" yaml:"metrics" toml:"metrics"`
 }
 
@@ -123,108 +125,22 @@ func LoadConfig(path string) GatewayConfig {
 		log.Fatal("unknown config file extension:", filepath.Ext(path))
 	}
 
-	return cfg
+	return ensureDefaults(cfg)
 }
 
-//nolint:gocognit,gocyclo,cyclop // to be replace by sub-methods in future
-func (cfg *GatewayConfig) Validate() error {
-	var errs []error
-
-	if cfg.Name == "" {
-		errs = append(errs, errors.New("gateway.name is required"))
-	}
-	if cfg.Version == "" {
-		errs = append(errs, errors.New("gateway.version is required"))
+// ensureDefaults ensures that default values are used in required configuration fields if they are not explicitly set.
+func ensureDefaults(cfg GatewayConfig) GatewayConfig {
+	if cfg.Server.Timeout == 0 {
+		cfg.Server.Timeout = defaultServerTimeout
 	}
 
-	// Server config.
-	if cfg.Server.Port <= 0 || cfg.Server.Port > 65535 {
-		errs = append(errs, errors.New("server.port must be between 1 and 65535"))
-	}
-	if cfg.Server.Timeout <= 0 {
-		errs = append(errs, errors.New("server.timeout must be > 0"))
-	}
-
-	// Dashboard config.
-	if cfg.Dashboard.Enable {
-		if cfg.Dashboard.Port <= 0 || cfg.Dashboard.Port > 65535 {
-			errs = append(errs, errors.New("dashboard.port must be between 1 and 65535"))
-		}
-		if cfg.Dashboard.Timeout <= 0 {
-			errs = append(errs, errors.New("dashboard.timeout must be > 0"))
-		}
-	}
-
-	// Routes config.
-	for i, route := range cfg.Routes {
-		prefix := fmt.Sprintf("routes[%d]", i)
-
-		if route.Path == "" {
-			errs = append(errs, fmt.Errorf("%s.path is required", prefix))
-		}
-		if route.Method == "" {
-			errs = append(errs, fmt.Errorf("%s.method is required", prefix))
-		}
-		if len(route.Upstreams) == 0 {
-			errs = append(errs, fmt.Errorf("%s.upstreams must not be empty", prefix))
-		}
-
-		if route.Aggregate != "" && route.Aggregate != strategyArray && route.Aggregate != strategyMerge {
-			errs = append(errs, fmt.Errorf("%s.aggregate must be 'array' or 'merge'", prefix))
-		}
-
-		// Upstreams config.
-		for j, u := range route.Upstreams {
-			upPrefix := fmt.Sprintf("%s.upstreams[%d]", prefix, j)
-
-			if u.URL == "" {
-				errs = append(errs, fmt.Errorf("%s.url is required", upPrefix))
-			} else if _, err := url.Parse(u.URL); err != nil {
-				errs = append(errs, fmt.Errorf("%s.url is invalid: %w", upPrefix, err))
-			}
-
-			if u.Timeout <= 0 {
-				errs = append(errs, fmt.Errorf("%s.timeout must be > 0", upPrefix))
-			}
-
-			// Upstream policies config.
-			p := u.Policy
-
-			for _, code := range p.AllowedStatuses {
-				if code < 100 || code > 599 {
-					errs = append(errs, fmt.Errorf("%s.policy.allowed_status_codes contains invalid status %d", upPrefix, code))
-				}
-			}
-
-			for from, to := range p.MapStatusCodes {
-				if from < 100 || from > 599 || to < 100 || to > 599 {
-					errs = append(errs, fmt.Errorf("%s.policy.map_status_codes has invalid mapping %d -> %d", upPrefix, from, to))
-				}
-			}
-
-			if p.MaxResponseBodySize < 0 {
-				errs = append(errs, fmt.Errorf("%s.policy.max_response_body_size must be >= 0", upPrefix))
-			}
-
-			// Upstream retry policies config.
-			r := p.RetryConfig
-			if r.MaxRetries < 0 {
-				errs = append(errs, fmt.Errorf("%s.policy.retry.max_retries must be >= 0", upPrefix))
-			}
-			if r.BackoffDelay < 0 {
-				errs = append(errs, fmt.Errorf("%s.policy.retry.backoff_delay must be >= 0", upPrefix))
-			}
-			for _, code := range r.RetryOnStatuses {
-				if code < 100 || code > 599 {
-					errs = append(errs, fmt.Errorf("%s.policy.retry.retry_on_statuses contains invalid status %d", upPrefix, code))
-				}
+	for i := range cfg.Routes {
+		for j := range cfg.Routes[i].Upstreams {
+			if cfg.Routes[i].Upstreams[j].Timeout == 0 {
+				cfg.Routes[i].Upstreams[j].Timeout = defaultUpstreamTimeout
 			}
 		}
 	}
 
-	if len(errs) > 0 {
-		return errors.Join(errs...)
-	}
-
-	return nil
+	return cfg
 }

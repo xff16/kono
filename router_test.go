@@ -1,15 +1,31 @@
 package tokka
 
 import (
-	"bytes"
+	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"slices"
+	"strings"
 	"testing"
 
-	"github.com/starwalkn/tokka/internal/metric"
 	"go.uber.org/zap"
+
+	"github.com/starwalkn/tokka/internal/metric"
 )
+
+func decodeJSONResponse(t *testing.T, body []byte) JSONResponse {
+	t.Helper()
+
+	var resp JSONResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("invalid JSON response: %v\nbody=%s", err, body)
+	}
+
+	return resp
+}
 
 type mockDispatcher struct {
 	results []UpstreamResponse
@@ -17,24 +33,6 @@ type mockDispatcher struct {
 
 func (m *mockDispatcher) dispatch(_ *Route, _ *http.Request) []UpstreamResponse {
 	return m.results
-}
-
-type mockAggregator struct{}
-
-func (m *mockAggregator) aggregate(responses []UpstreamResponse, _ string, _ bool) AggregatedResponse {
-	var out [][]byte
-
-	for _, r := range responses {
-		out = append(out, r.Body)
-	}
-
-	aggregationResponse := AggregatedResponse{
-		Data:    bytes.Join(out, []byte(",")),
-		Errors:  nil,
-		Partial: false,
-	}
-
-	return aggregationResponse
 }
 
 type mockPlugin struct {
@@ -63,14 +61,14 @@ func TestRouter_ServeHTTP_BasicFlow(t *testing.T) {
 	r := &Router{
 		dispatcher: &mockDispatcher{
 			results: []UpstreamResponse{
-				{Body: []byte("A"), Status: 200},
-				{Body: []byte("B"), Status: 200},
+				{Status: http.StatusOK, Body: []byte(`"A"`), Err: nil},
+				{Status: http.StatusOK, Body: []byte(`"B"`), Err: nil},
 			},
 		},
-		aggregator: &mockAggregator{},
+		aggregator: &defaultAggregator{log: zap.NewNop()},
 		Routes: []Route{
 			{
-				Path:      "/test",
+				Path:      "/test/basic/flow",
 				Method:    http.MethodGet,
 				Aggregate: "array",
 			},
@@ -79,22 +77,158 @@ func TestRouter_ServeHTTP_BasicFlow(t *testing.T) {
 		metrics: metric.NewNop(),
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test/basic/flow", nil)
 	rec := httptest.NewRecorder()
 
 	r.ServeHTTP(rec, req)
 
 	res := rec.Result()
 	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
 
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", res.StatusCode)
 	}
 
-	got := string(body)
-	if got != "A,B" && got != "B,A" {
-		t.Errorf("unexpected body: %q", got)
+	if ct := res.Header.Get("Content-Type"); !strings.Contains(ct, "application/json") {
+		t.Errorf("unexpected Content-Type: %s", ct)
+	}
+
+	body, _ := io.ReadAll(res.Body)
+
+	resp := decodeJSONResponse(t, body)
+
+	if len(resp.Errors) != 0 {
+		t.Fatalf("expected no errors, got %d", len(resp.Errors))
+	}
+
+	var got []string
+	if err := json.Unmarshal(resp.Data, &got); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(got) != 2 || !slices.Contains(got, "A") || !slices.Contains(got, "B") {
+		t.Fatalf("unexpected data: %v", got)
+	}
+}
+
+func TestRouter_ServeHTTP_PartialResponse(t *testing.T) {
+	r := &Router{
+		dispatcher: &mockDispatcher{
+			results: []UpstreamResponse{
+				{Status: http.StatusOK, Body: []byte(`"A"`), Err: nil},
+				{Status: http.StatusInternalServerError, Body: nil, Err: &UpstreamError{
+					Kind:       UpstreamTimeout,
+					StatusCode: http.StatusInternalServerError,
+					Err:        errors.New("upstream timeout"),
+				}},
+			},
+		},
+		aggregator: &defaultAggregator{log: zap.NewNop()},
+		Routes: []Route{
+			{
+				Path:                "/test/partial/response",
+				Method:              http.MethodGet,
+				Aggregate:           "array",
+				AllowPartialResults: true,
+			},
+		},
+		log:     zap.NewNop(),
+		metrics: metric.NewNop(),
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/test/partial/response", nil)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	res := rec.Result()
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusPartialContent {
+		t.Fatalf("expected 206, got %d", res.StatusCode)
+	}
+
+	if ct := res.Header.Get("Content-Type"); !strings.Contains(ct, "application/json") {
+		t.Errorf("unexpected Content-Type: %s", ct)
+	}
+
+	body, _ := io.ReadAll(res.Body)
+
+	resp := decodeJSONResponse(t, body)
+
+	if len(resp.Errors) != 1 {
+		t.Fatalf("expected 1 error, got %d", len(resp.Errors))
+	}
+
+	if resp.Errors[0].Code != ErrorCodeUpstreamUnavailable && resp.Errors[0].Message != "service temporarily unavailable" {
+		t.Fatalf("unexpected error code or message %s %s", resp.Errors[0].Code, resp.Errors[0].Message)
+	}
+
+	var got []string
+	if err := json.Unmarshal(resp.Data, &got); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(got) != 1 || !slices.Contains(got, "A") {
+		t.Fatalf("unexpected data: %v", got)
+	}
+}
+
+func TestRouter_ServeHTTP_UpstreamError(t *testing.T) {
+	r := &Router{
+		dispatcher: &mockDispatcher{
+			results: []UpstreamResponse{
+				{Status: http.StatusOK, Body: []byte(`"A"`), Err: nil},
+				{Status: http.StatusInternalServerError, Body: nil, Err: &UpstreamError{
+					Kind:       UpstreamTimeout,
+					StatusCode: http.StatusInternalServerError,
+					Err:        errors.New("upstream timeout"),
+				}},
+			},
+		},
+		aggregator: &defaultAggregator{log: zap.NewNop()},
+		Routes: []Route{
+			{
+				Path:                "/test/upstream/error",
+				Method:              http.MethodGet,
+				Aggregate:           "array",
+				AllowPartialResults: false,
+			},
+		},
+		log:     zap.NewNop(),
+		metrics: metric.NewNop(),
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/test/upstream/error", nil)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	res := rec.Result()
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", res.StatusCode)
+	}
+
+	if ct := res.Header.Get("Content-Type"); !strings.Contains(ct, "application/json") {
+		t.Errorf("unexpected Content-Type: %s", ct)
+	}
+
+	body, _ := io.ReadAll(res.Body)
+
+	resp := decodeJSONResponse(t, body)
+
+	if resp.Data != nil {
+		t.Fatalf("unexpected data: %v", resp.Data)
+	}
+
+	if len(resp.Errors) != 1 {
+		t.Fatalf("expected 1 error, got %d", len(resp.Errors))
+	}
+
+	if resp.Errors[0].Code != ErrorCodeUpstreamUnavailable && resp.Errors[0].Message != "service temporarily unavailable" {
+		t.Fatalf("unexpected error code or message %s %s", resp.Errors[0].Code, resp.Errors[0].Message)
 	}
 }
 
@@ -105,7 +239,7 @@ func TestRouter_ServeHTTP_NoRoute(t *testing.T) {
 		metrics: metric.NewNop(),
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/not-found", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test/not/found", nil)
 	rec := httptest.NewRecorder()
 
 	r.ServeHTTP(rec, req)
@@ -140,13 +274,13 @@ func TestRouter_ServeHTTP_WithPlugins(t *testing.T) {
 	r := &Router{
 		dispatcher: &mockDispatcher{
 			results: []UpstreamResponse{
-				{Body: []byte("OK"), Status: 200},
+				{Status: http.StatusOK, Body: []byte(`"OK"`), Err: nil},
 			},
 		},
-		aggregator: &mockAggregator{},
+		aggregator: &defaultAggregator{log: zap.NewNop()},
 		Routes: []Route{
 			{
-				Path:      "/plug",
+				Path:      "/test/with/plugins",
 				Method:    http.MethodGet,
 				Plugins:   []Plugin{reqPlugin, respPlugin},
 				Aggregate: "array",
@@ -156,25 +290,40 @@ func TestRouter_ServeHTTP_WithPlugins(t *testing.T) {
 		metrics: metric.NewNop(),
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/plug", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test/with/plugins", nil)
 	rec := httptest.NewRecorder()
 
 	r.ServeHTTP(rec, req)
 
 	res := rec.Result()
 	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", res.StatusCode)
+	}
+
+	if ct := res.Header.Get("Content-Type"); !strings.Contains(ct, "application/json") {
+		t.Errorf("unexpected Content-Type: %s", ct)
+	}
+
 	body, _ := io.ReadAll(res.Body)
 
-	if string(body) != "OK" {
-		t.Errorf("expected body OK, got %q", string(body))
+	resp := decodeJSONResponse(t, body)
+
+	if len(resp.Errors) != 0 {
+		t.Fatalf("expected no errors, got %d", len(resp.Errors))
+	}
+
+	if string(resp.Data) != `"OK"` {
+		t.Errorf("expected body OK, got %q", resp.Data)
 	}
 
 	if res.Header.Get("X-Plugin") != "done" {
 		t.Errorf("response plugin not executed")
 	}
 
-	if len(executed) != 2 {
-		t.Errorf("expected 2 plugins executed, got %v", executed)
+	if !reflect.DeepEqual(executed, []string{"req", "resp"}) {
+		t.Errorf("unexpected plugin order: %v", executed)
 	}
 }
 
@@ -182,13 +331,13 @@ func TestRouter_ServeHTTP_WithMiddleware(t *testing.T) {
 	r := &Router{
 		dispatcher: &mockDispatcher{
 			results: []UpstreamResponse{
-				{Body: []byte("body"), Status: 200},
+				{Status: http.StatusOK, Body: []byte(`"OK"`), Err: nil},
 			},
 		},
-		aggregator: &mockAggregator{},
+		aggregator: &defaultAggregator{log: zap.NewNop()},
 		Routes: []Route{
 			{
-				Path:        "/mw",
+				Path:        "/test/with/middleware",
 				Method:      http.MethodGet,
 				Middlewares: []Middleware{&mockMiddleware{}},
 			},
@@ -197,13 +346,21 @@ func TestRouter_ServeHTTP_WithMiddleware(t *testing.T) {
 		metrics: metric.NewNop(),
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/mw", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test/with/middleware", nil)
 	rec := httptest.NewRecorder()
 
 	r.ServeHTTP(rec, req)
 
 	res := rec.Result()
 	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", res.StatusCode)
+	}
+
+	if ct := res.Header.Get("Content-Type"); !strings.Contains(ct, "application/json") {
+		t.Errorf("unexpected Content-Type: %s", ct)
+	}
 
 	if got := res.Header.Get("X-Middleware"); got != "ok" {
 		t.Errorf("middleware not executed, header=%q", got)

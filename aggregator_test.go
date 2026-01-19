@@ -70,6 +70,14 @@ func TestAggregator_Merge_PartialAllowed(t *testing.T) {
 		"a": float64(1),
 	}
 
+	if len(aggregated.Errors) != 1 {
+		t.Errorf("expected 1 error, got %d", len(aggregated.Errors))
+	}
+
+	if !aggregated.Partial {
+		t.Errorf("expected Partial=true")
+	}
+
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %+v, want %+v", got, want)
 	}
@@ -114,7 +122,7 @@ func TestAggregator_Array_Success(t *testing.T) {
 	}
 }
 
-func TestAggregator_UnknownStrategy(t *testing.T) {
+func TestAggregator_RawResponse(t *testing.T) {
 	agg := newTestAggregator()
 
 	responses := makeUpstreamResponses([][]byte{
@@ -122,7 +130,11 @@ func TestAggregator_UnknownStrategy(t *testing.T) {
 	}, []*UpstreamError{nil})
 
 	aggregated := agg.aggregate(responses, "unknown", false)
-	if aggregated.Data != nil {
+	if aggregated.Data == nil {
 		t.Errorf("expected nil result for unknown strategy, got %s", string(aggregated.Data))
+	}
+
+	if string(aggregated.Data) != (`{"a":1}`) {
+		t.Errorf("got %s, want %s", string(aggregated.Data), string([]byte(`{"a":1}`)))
 	}
 }

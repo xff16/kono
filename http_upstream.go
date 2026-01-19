@@ -77,6 +77,7 @@ func (u *httpUpstream) call(ctx context.Context, original *http.Request, origina
 		uresp.Err = &UpstreamError{
 			Kind:       UpstreamBadStatus,
 			StatusCode: hresp.StatusCode,
+			Err:        errors.New("upstream error"),
 		}
 
 		return uresp

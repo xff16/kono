@@ -39,7 +39,7 @@ type UpstreamError struct {
 	Err        error             // Original error. Not for client!
 }
 
-// Errors returns the upstream error kind. Error kind is a string, not error interface!
+// Error returns the upstream error kind. Error kind is a string, not error interface!
 func (ue *UpstreamError) Error() string {
 	return string(ue.Kind)
 }
