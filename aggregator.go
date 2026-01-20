@@ -20,7 +20,7 @@ type AggregatedResponse struct {
 }
 
 type aggregator interface {
-	aggregate(responses []UpstreamResponse, mode string, allowPartialResults bool) AggregatedResponse
+	aggregate(responses []UpstreamResponse, aggregation AggregationConfig) AggregatedResponse
 }
 
 type defaultAggregator struct {
@@ -32,18 +32,18 @@ type defaultAggregator struct {
 // by merging JSON objects ("merge") or creating a JSON array ("array").
 // Upstream errors respect allowPartialResults: partial results may be included
 // if allowed; otherwise a single error response is returned.
-func (a *defaultAggregator) aggregate(responses []UpstreamResponse, mode string, allowPartialResults bool) AggregatedResponse {
+func (a *defaultAggregator) aggregate(responses []UpstreamResponse, aggregation AggregationConfig) AggregatedResponse {
 	if len(responses) == 1 {
 		return a.rawResponse(responses)
 	}
 
-	switch mode {
+	switch aggregation.Strategy {
 	case strategyMerge:
-		return a.mergeResponses(responses, allowPartialResults)
+		return a.mergeResponses(responses, aggregation.AllowPartialResults)
 	case strategyArray:
-		return a.arrayOfResponses(responses, allowPartialResults)
+		return a.arrayOfResponses(responses, aggregation.AllowPartialResults)
 	default:
-		a.log.Error("unknown aggregation strategy", zap.String("strategy", mode))
+		a.log.Error("unknown aggregation strategy", zap.String("strategy", aggregation.Strategy))
 		return AggregatedResponse{}
 	}
 }

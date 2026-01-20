@@ -223,7 +223,7 @@ import TabItem from '@theme/TabItem';
 <Tabs>
   <TabItem value="yaml" label="YAML" default>
 ```yaml
-schema: v1
+config_version: v1
 name: Tokka Gateway
 version: "0.0.1"
 debug: false
@@ -231,7 +231,6 @@ debug: false
 server:
   port: 7805
   timeout: 5000
-  enable_metrics: true
   metrics:
     enabled: true
     provider: victoriametrics
@@ -241,7 +240,7 @@ dashboard:
   port: 7806
   timeout: 5000
 
-plugins:
+features:
   - name: ratelimit
     config:
       limit: 10
@@ -259,7 +258,7 @@ middlewares:
     can_fail_on_load: false
     config:
       enabled: true
-    
+
   - name: auth
     path: /tokka/middlewares/auth.so
     can_fail_on_load: false
@@ -296,8 +295,9 @@ routes:
         method: GET
         forward_headers:
           - "X-Request-ID"
-    aggregate: merge
-    allow_partial_results: true
+    aggregation:
+      strategy: merge
+      allow_partial_results: true
     max_parallel_upstreams: 1
 
   - path: /api/domains
@@ -324,9 +324,10 @@ routes:
           - "id"
         forward_headers:
           - "X-For"
-    aggregate: merge
-    allow_partial_results: false
-    max_parallel_upstreams: 5
+    aggregation:
+      strategy: merge
+      allow_partial_results: false
+    max_parallel_upstreams: 3
 
   - path: /api/domains
     method: POST
@@ -345,8 +346,9 @@ routes:
 
       - url: http://profile-service.local/v1/details
         method: GET
-    aggregate: array
-    allow_partial_results: false
+    aggregation:
+      strategy: array
+      allow_partial_results: false
 
   - path: /api/domains
     method: DELETE
@@ -372,36 +374,34 @@ routes:
 
       - url: http://profile-service.local/v1/details
         method: GET
-    aggregate: array
-    allow_partial_results: false
+    aggregation:
+      strategy: array
+      allow_partial_results: false
+
 ```
   </TabItem>
 
   <TabItem value="json" label="JSON">
 ```json
 {
-  "schema": "v1",
+  "config_version": "v1",
   "name": "Tokka Gateway",
   "version": "0.0.1",
   "debug": false,
-
   "server": {
     "port": 7805,
     "timeout": 5000,
-    "enable_metrics": true,
     "metrics": {
       "enabled": true,
       "provider": "victoriametrics"
     }
   },
-
   "dashboard": {
     "enable": true,
     "port": 7806,
     "timeout": 5000
   },
-
-  "plugins": [
+  "features": [
     {
       "name": "ratelimit",
       "config": {
@@ -410,7 +410,6 @@ routes:
       }
     }
   ],
-
   "middlewares": [
     {
       "name": "recoverer",
@@ -441,7 +440,6 @@ routes:
       }
     }
   ],
-
   "routes": [
     {
       "path": "/api/users",
@@ -473,11 +471,12 @@ routes:
           "forward_headers": ["X-Request-ID"]
         }
       ],
-      "aggregate": "merge",
-      "allow_partial_results": true
+      "aggregation": {
+        "strategy": "merge",
+        "allow_partial_results": true
+      },
       "max_parallel_upstreams": 1
     },
-
     {
       "path": "/api/domains",
       "method": "GET",
@@ -507,11 +506,12 @@ routes:
           "forward_headers": ["X-For"]
         }
       ],
-      "aggregate": "merge",
-      "allow_partial_results": false
-      "max_parallel_upstreams": 5
+      "aggregation": {
+        "strategy": "merge",
+        "allow_partial_results": false
+      },
+      "max_parallel_upstreams": 3
     },
-
     {
       "path": "/api/domains",
       "method": "POST",
@@ -538,10 +538,11 @@ routes:
           "method": "GET"
         }
       ],
-      "aggregate": "array",
-      "allow_partial_results": false
+      "aggregation": {
+        "strategy": "array",
+        "allow_partial_results": false
+      }
     },
-
     {
       "path": "/api/domains",
       "method": "DELETE",
@@ -577,8 +578,10 @@ routes:
           "method": "GET"
         }
       ],
-      "aggregate": "array",
-      "allow_partial_results": false
+      "aggregation": {
+        "strategy": "array",
+        "allow_partial_results": false
+      }
     }
   ]
 }
@@ -587,7 +590,7 @@ routes:
 
   <TabItem value="toml" label="TOML">
 ```toml
-schema = "v1"
+config_version = "v1"
 name = "Tokka Gateway"
 version = "0.0.1"
 debug = false
@@ -595,7 +598,6 @@ debug = false
 [server]
 port = 7805
 timeout = 5000
-enable_metrics = true
 
 [server.metrics]
 enabled = true
@@ -606,10 +608,10 @@ enable = true
 port = 7806
 timeout = 5000
 
-[[plugins]]
+[[features]]
 name = "ratelimit"
 
-[plugins.config]
+[features.config]
 limit = 10
 window = 1
 
@@ -636,17 +638,19 @@ can_fail_on_load = false
 
 [middlewares.config]
 enabled = true
-issuer = fake_issuer
-audience = fake_audience
-alg = HS256
-hmac_secret = fake_hmac_secret
+issuer = "fake_issuer"
+audience = "fake_audience"
+alg = "HS256"
+hmac_secret = "fake_hmac_secret"
 
 [[routes]]
 path = "/api/users"
 method = "GET"
-aggregate = "merge"
-allow_partial_results = true
 max_parallel_upstreams = 1
+
+[routes.aggregation]
+strategy = "merge"
+allow_partial_results = true
 
 [[routes.upstreams]]
 url = "http://user-service.local/v1/users"
@@ -676,9 +680,11 @@ forward_headers = ["X-Request-ID"]
 [[routes]]
 path = "/api/domains"
 method = "GET"
-aggregate = "merge"
+max_parallel_upstreams = 3
+
+[routes.aggregation]
+strategy = "merge"
 allow_partial_results = false
-max_parallel_upstreams = 5
 
 [[routes.middlewares]]
 name = "logger"
@@ -705,9 +711,10 @@ forward_headers = ["X-For"]
 [[routes]]
 path = "/api/domains"
 method = "POST"
-aggregate = "array"
+
+[routes.aggregation]
+strategy = "array"
 allow_partial_results = false
-plugins = []
 
 [[routes.middlewares]]
 name = "compressor"
@@ -730,9 +737,10 @@ method = "GET"
 [[routes]]
 path = "/api/domains"
 method = "DELETE"
-aggregate = "array"
+
+[routes.aggregation]
+strategy = "array"
 allow_partial_results = false
-plugins = []
 
 [[routes.middlewares]]
 name = "compressor"

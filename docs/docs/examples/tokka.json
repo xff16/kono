@@ -1,9 +1,8 @@
 {
-  "schema": "v1",
+  "config_version": "v1",
   "name": "Tokka Gateway",
   "version": "0.0.1",
   "debug": false,
-
   "server": {
     "port": 7805,
     "timeout": 5000,
@@ -12,14 +11,12 @@
       "provider": "victoriametrics"
     }
   },
-
   "dashboard": {
     "enable": true,
     "port": 7806,
     "timeout": 5000
   },
-
-  "plugins": [
+  "features": [
     {
       "name": "ratelimit",
       "config": {
@@ -28,7 +25,6 @@
       }
     }
   ],
-
   "middlewares": [
     {
       "name": "recoverer",
@@ -59,7 +55,6 @@
       }
     }
   ],
-
   "routes": [
     {
       "path": "/api/users",
@@ -91,10 +86,12 @@
           "forward_headers": ["X-Request-ID"]
         }
       ],
-      "aggregate": "merge",
-      "allow_partial_results": true
+      "aggregation": {
+        "strategy": "merge",
+        "allow_partial_results": true
+      },
+      "max_parallel_upstreams": 1
     },
-
     {
       "path": "/api/domains",
       "method": "GET",
@@ -124,10 +121,12 @@
           "forward_headers": ["X-For"]
         }
       ],
-      "aggregate": "merge",
-      "allow_partial_results": false
+      "aggregation": {
+        "strategy": "merge",
+        "allow_partial_results": false
+      },
+      "max_parallel_upstreams": 3
     },
-
     {
       "path": "/api/domains",
       "method": "POST",
@@ -154,10 +153,11 @@
           "method": "GET"
         }
       ],
-      "aggregate": "array",
-      "allow_partial_results": false
+      "aggregation": {
+        "strategy": "array",
+        "allow_partial_results": false
+      }
     },
-
     {
       "path": "/api/domains",
       "method": "DELETE",
@@ -193,8 +193,10 @@
           "method": "GET"
         }
       ],
-      "aggregate": "array",
-      "allow_partial_results": false
+      "aggregation": {
+        "strategy": "array",
+        "allow_partial_results": false
+      }
     }
   ]
 }

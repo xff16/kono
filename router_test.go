@@ -68,9 +68,12 @@ func TestRouter_ServeHTTP_BasicFlow(t *testing.T) {
 		aggregator: &defaultAggregator{log: zap.NewNop()},
 		Routes: []Route{
 			{
-				Path:      "/test/basic/flow",
-				Method:    http.MethodGet,
-				Aggregate: "array",
+				Path:   "/test/basic/flow",
+				Method: http.MethodGet,
+				Aggregation: AggregationConfig{
+					Strategy:            strategyArray,
+					AllowPartialResults: false,
+				},
 			},
 		},
 		log:     zap.NewNop(),
@@ -126,10 +129,12 @@ func TestRouter_ServeHTTP_PartialResponse(t *testing.T) {
 		aggregator: &defaultAggregator{log: zap.NewNop()},
 		Routes: []Route{
 			{
-				Path:                "/test/partial/response",
-				Method:              http.MethodGet,
-				Aggregate:           "array",
-				AllowPartialResults: true,
+				Path:   "/test/partial/response",
+				Method: http.MethodGet,
+				Aggregation: AggregationConfig{
+					Strategy:            strategyArray,
+					AllowPartialResults: true,
+				},
 			},
 		},
 		log:     zap.NewNop(),
@@ -189,10 +194,12 @@ func TestRouter_ServeHTTP_UpstreamError(t *testing.T) {
 		aggregator: &defaultAggregator{log: zap.NewNop()},
 		Routes: []Route{
 			{
-				Path:                "/test/upstream/error",
-				Method:              http.MethodGet,
-				Aggregate:           "array",
-				AllowPartialResults: false,
+				Path:   "/test/upstream/error",
+				Method: http.MethodGet,
+				Aggregation: AggregationConfig{
+					Strategy:            strategyArray,
+					AllowPartialResults: false,
+				},
 			},
 		},
 		log:     zap.NewNop(),
@@ -280,10 +287,13 @@ func TestRouter_ServeHTTP_WithPlugins(t *testing.T) {
 		aggregator: &defaultAggregator{log: zap.NewNop()},
 		Routes: []Route{
 			{
-				Path:      "/test/with/plugins",
-				Method:    http.MethodGet,
-				Plugins:   []Plugin{reqPlugin, respPlugin},
-				Aggregate: "array",
+				Path:    "/test/with/plugins",
+				Method:  http.MethodGet,
+				Plugins: []Plugin{reqPlugin, respPlugin},
+				Aggregation: AggregationConfig{
+					Strategy:            strategyArray,
+					AllowPartialResults: false,
+				},
 			},
 		},
 		log:     zap.NewNop(),

@@ -13,20 +13,20 @@ import (
 )
 
 const (
-	defaultUpstreamTimeout time.Duration = 3 * time.Second
-	defaultServerTimeout   time.Duration = 5 * time.Second
+	defaultUpstreamTimeout = 3 * time.Second
+	defaultServerTimeout   = 5 * time.Second
 )
 
 type GatewayConfig struct {
-	Schema      string             `json:"schema" yaml:"schema" toml:"schema"`
-	Name        string             `json:"name" yaml:"name" toml:"name"`
-	Version     string             `json:"version" yaml:"version" toml:"version"`
-	Debug       bool               `json:"debug" yaml:"debug" toml:"debug"`
-	Server      ServerConfig       `json:"server" yaml:"server" toml:"server"`
-	Dashboard   DashboardConfig    `json:"dashboard" yaml:"dashboard" toml:"dashboard"`
-	Features    []FeatureConfig    `json:"features" yaml:"features" toml:"features"`
-	Middlewares []MiddlewareConfig `json:"middlewares" yaml:"middlewares" toml:"middlewares"`
-	Routes      []RouteConfig      `json:"routes" yaml:"routes" toml:"routes"`
+	ConfigVersion string             `json:"config_version" yaml:"config_version" toml:"config_version"`
+	Name          string             `json:"name" yaml:"name" toml:"name"`
+	Version       string             `json:"version" yaml:"version" toml:"version"`
+	Debug         bool               `json:"debug" yaml:"debug" toml:"debug"`
+	Server        ServerConfig       `json:"server" yaml:"server" toml:"server"`
+	Dashboard     DashboardConfig    `json:"dashboard" yaml:"dashboard" toml:"dashboard"`
+	Features      []FeatureConfig    `json:"features" yaml:"features" toml:"features"`
+	Middlewares   []MiddlewareConfig `json:"middlewares" yaml:"middlewares" toml:"middlewares"`
+	Routes        []RouteConfig      `json:"routes" yaml:"routes" toml:"routes"`
 }
 
 type ServerConfig struct {
@@ -52,10 +52,13 @@ type RouteConfig struct {
 	Plugins              []PluginConfig     `json:"plugins" yaml:"plugins" toml:"plugins"`
 	Middlewares          []MiddlewareConfig `json:"middlewares" yaml:"middlewares" toml:"middlewares"`
 	Upstreams            []UpstreamConfig   `json:"upstreams" yaml:"upstreams" toml:"upstreams"`
-	Aggregate            string             `json:"aggregate" yaml:"aggregate" toml:"aggregate"`
-	Transform            string             `json:"transform" yaml:"transform" toml:"transform"`
-	AllowPartialResults  bool               `json:"allow_partial_results" yaml:"allow_partial_results" toml:"allow_partial_results"`
+	Aggregation          AggregationConfig  `json:"aggregation" yaml:"aggregation" toml:"aggregation"`
 	MaxParallelUpstreams int64              `json:"max_parallel_upstreams" yaml:"max_parallel_upstreams" toml:"max_parallel_upstreams"`
+}
+
+type AggregationConfig struct {
+	Strategy            string `json:"strategy" yaml:"strategy" toml:"strategy"`
+	AllowPartialResults bool   `json:"allow_partial_results" yaml:"allow_partial_results" toml:"allow_partial_results"`
 }
 
 type UpstreamConfig struct {

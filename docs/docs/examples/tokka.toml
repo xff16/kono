@@ -1,4 +1,4 @@
-schema = "v1"
+config_version = "v1"
 name = "Tokka Gateway"
 version = "0.0.1"
 debug = false
@@ -16,10 +16,10 @@ enable = true
 port = 7806
 timeout = 5000
 
-[[plugins]]
+[[features]]
 name = "ratelimit"
 
-[plugins.config]
+[features.config]
 limit = 10
 window = 1
 
@@ -46,15 +46,18 @@ can_fail_on_load = false
 
 [middlewares.config]
 enabled = true
-issuer = fake_issuer
-audience = fake_audience
-alg = HS256
-hmac_secret = fake_hmac_secret
+issuer = "fake_issuer"
+audience = "fake_audience"
+alg = "HS256"
+hmac_secret = "fake_hmac_secret"
 
 [[routes]]
 path = "/api/users"
 method = "GET"
-aggregate = "merge"
+max_parallel_upstreams = 1
+
+[routes.aggregation]
+strategy = "merge"
 allow_partial_results = true
 
 [[routes.upstreams]]
@@ -85,7 +88,10 @@ forward_headers = ["X-Request-ID"]
 [[routes]]
 path = "/api/domains"
 method = "GET"
-aggregate = "merge"
+max_parallel_upstreams = 3
+
+[routes.aggregation]
+strategy = "merge"
 allow_partial_results = false
 
 [[routes.middlewares]]
@@ -113,9 +119,10 @@ forward_headers = ["X-For"]
 [[routes]]
 path = "/api/domains"
 method = "POST"
-aggregate = "array"
+
+[routes.aggregation]
+strategy = "array"
 allow_partial_results = false
-plugins = []
 
 [[routes.middlewares]]
 name = "compressor"
@@ -138,9 +145,10 @@ method = "GET"
 [[routes]]
 path = "/api/domains"
 method = "DELETE"
-aggregate = "array"
+
+[routes.aggregation]
+strategy = "array"
 allow_partial_results = false
-plugins = []
 
 [[routes.middlewares]]
 name = "compressor"

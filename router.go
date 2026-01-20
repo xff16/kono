@@ -30,9 +30,7 @@ type Route struct {
 	Path                 string
 	Method               string
 	Upstreams            []Upstream
-	Aggregate            string
-	Transform            string
-	AllowPartialResults  bool
+	Aggregation          AggregationConfig
 	MaxParallelUpstreams int64
 	Plugins              []Plugin
 	Middlewares          []Middleware
@@ -139,9 +137,7 @@ func NewRouter(routerConfigSet RouterConfigSet, log *zap.Logger) *Router {
 			Path:                 rcfg.Path,
 			Method:               rcfg.Method,
 			Upstreams:            initUpstreams(rcfg.Upstreams),
-			Aggregate:            rcfg.Aggregate,
-			Transform:            rcfg.Transform,
-			AllowPartialResults:  rcfg.AllowPartialResults,
+			Aggregation:          rcfg.Aggregation,
 			MaxParallelUpstreams: rcfg.MaxParallelUpstreams,
 			Plugins:              initPlugins(rcfg.Plugins, log),
 			Middlewares:          middlewares,
@@ -302,9 +298,9 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	rt := r.match(req)
-	if rt == nil {
-		r.log.Error("no route found", zap.String("request_uri", req.URL.RequestURI()))
+	matchedRoute := r.match(req)
+	if matchedRoute == nil {
+		r.log.Error("no route matched", zap.String("request_uri", req.URL.RequestURI()))
 		r.metrics.IncFailedRequestsTotal(metric.FailReasonNoMatchedRoute)
 
 		http.NotFound(w, req)
@@ -318,7 +314,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		requestID := req.Header.Get("X-Request-ID")
 
 		// Request-phase plugins.
-		for _, p := range rt.Plugins {
+		for _, p := range matchedRoute.Plugins {
 			if p.Type() != PluginTypeRequest {
 				continue
 			}
@@ -329,7 +325,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// Upstream dispatch.
-		responses := r.dispatcher.dispatch(rt, req)
+		responses := r.dispatcher.dispatch(matchedRoute, req)
 		if responses == nil {
 			// Currently, responses can only be nil if the body size limit is exceeded or body read fails.
 			r.log.Error("request body too large", zap.Int("max_body_size", maxBodySize))
@@ -341,11 +337,11 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		r.log.Debug("dispatched responses", zap.Any("responses", responses))
 
 		// Aggregate upstream responses.
-		aggregated := r.aggregator.aggregate(responses, rt.Aggregate, rt.AllowPartialResults)
+		aggregated := r.aggregator.aggregate(responses, matchedRoute.Aggregation)
 		attachRequestID(aggregated.Errors, requestID)
 
 		r.log.Debug("aggregated responses",
-			zap.String("strategy", rt.Aggregate),
+			zap.String("strategy", matchedRoute.Aggregation.Strategy),
 			zap.Any("aggregated", aggregated),
 		)
 
@@ -388,7 +384,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 
 		tctx.SetResponse(resp)
-		for _, p := range rt.Plugins {
+		for _, p := range matchedRoute.Plugins {
 			if p.Type() != PluginTypeResponse {
 				continue
 			}
@@ -404,8 +400,8 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		copyResponse(w, tctx.Response()) //nolint:bodyclose // body closes in copyResponse
 	})
 
-	for i := len(rt.Middlewares) - 1; i >= 0; i-- {
-		routeHandler = rt.Middlewares[i].Handler(routeHandler)
+	for i := len(matchedRoute.Middlewares) - 1; i >= 0; i-- {
+		routeHandler = matchedRoute.Middlewares[i].Handler(routeHandler)
 	}
 
 	routeHandler.ServeHTTP(w, req)
