@@ -72,6 +72,7 @@ routes:
           - "X-Request-ID"
     aggregate: merge
     allow_partial_results: true
+    max_parallel_upstreams: 1
 
   - path: /api/domains
     method: GET
@@ -99,6 +100,7 @@ routes:
           - "X-For"
     aggregate: merge
     allow_partial_results: false
+    max_parallel_upstreams: 3
 
   - path: /api/domains
     method: POST

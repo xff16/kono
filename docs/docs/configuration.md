@@ -111,19 +111,21 @@ routes:
     method: GET
     aggregate: merge
     allow_partial_results: true
+    max_parallel_upstreams: 3
 ```
 
 ### Route Fields
 
-| Field                   | Type   | Description                                              |
-| ----------------------- | ------ | -------------------------------------------------------- |
-| `path`                  | string | URL path to match.                                       |
-| `method`                | string | HTTP method (GET, POST, PUT, DELETE, etc.).              |
-| `middlewares`           | list   | Route-specific middlewares.                              |
-| `plugins`               | list   | Route-specific plugins.                                  |
-| `upstreams`             | list   | One or more upstream definitions.                        |
-| `aggregate`             | string | Aggregation strategy: `merge` or `array`.                |
-| `allow_partial_results` | bool   | Allows successful responses even if some upstreams fail. |
+| Field                    | Type   | Description                                              |
+|--------------------------|--------|----------------------------------------------------------|
+| `path`                   | string | URL path to match.                                       |
+| `method`                 | string | HTTP method (GET, POST, PUT, DELETE, etc.).              |
+| `middlewares`            | list   | Route-specific middlewares.                              |
+| `plugins`                | list   | Route-specific plugins.                                  |
+| `upstreams`              | list   | One or more upstream definitions.                        |
+| `aggregate`              | string | Aggregation strategy: `merge` or `array`.                |
+| `allow_partial_results`  | bool   | Allows successful responses even if some upstreams fail. |
+| `max_parallel_upstreams` | int    | Max parallel upsteams in concrete route.                 |
 
 
 ## Upstreams
@@ -296,6 +298,7 @@ routes:
           - "X-Request-ID"
     aggregate: merge
     allow_partial_results: true
+    max_parallel_upstreams: 1
 
   - path: /api/domains
     method: GET
@@ -323,6 +326,7 @@ routes:
           - "X-For"
     aggregate: merge
     allow_partial_results: false
+    max_parallel_upstreams: 5
 
   - path: /api/domains
     method: POST
@@ -471,6 +475,7 @@ routes:
       ],
       "aggregate": "merge",
       "allow_partial_results": true
+      "max_parallel_upstreams": 1
     },
 
     {
@@ -504,6 +509,7 @@ routes:
       ],
       "aggregate": "merge",
       "allow_partial_results": false
+      "max_parallel_upstreams": 5
     },
 
     {
@@ -640,6 +646,7 @@ path = "/api/users"
 method = "GET"
 aggregate = "merge"
 allow_partial_results = true
+max_parallel_upstreams = 1
 
 [[routes.upstreams]]
 url = "http://user-service.local/v1/users"
@@ -671,6 +678,7 @@ path = "/api/domains"
 method = "GET"
 aggregate = "merge"
 allow_partial_results = false
+max_parallel_upstreams = 5
 
 [[routes.middlewares]]
 name = "logger"
