@@ -244,13 +244,15 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // match matches the given request to a route.
 func (r *Router) match(req *http.Request) *Route {
-	for _, route := range r.Routes {
+	for i := range r.Routes {
+		route := &r.Routes[i]
+
 		if route.Method != "" && route.Method != req.Method {
 			continue
 		}
 
 		if route.Path != "" && req.URL.Path == route.Path {
-			return &route
+			return route
 		}
 	}
 
