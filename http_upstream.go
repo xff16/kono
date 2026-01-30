@@ -18,7 +18,6 @@ type httpUpstream struct {
 	url                 string
 	method              string
 	timeout             time.Duration
-	headers             map[string]string
 	forwardHeaders      []string
 	forwardQueryStrings []string
 	policy              UpstreamPolicy
@@ -240,15 +239,10 @@ func (u *httpUpstream) resolveHeaders(target, original *http.Request) {
 		}
 	}
 
-	// Rewrite headers which exists in upstream headers configuration (rewriting only forwarded headers).
-	for header, value := range u.headers {
-		if slices.Contains(u.forwardHeaders, "*") || target.Header.Get(header) != "" {
-			target.Header.Set(header, value)
-		}
-	}
-
-	// Always forward the Content-Type header.
+	// Always forward these headers.
 	target.Header.Set("Content-Type", original.Header.Get("Content-Type"))
+	target.Header.Set("Host", target.Host)
+	target.Header.Add("X-Forwarded-For", original.Host)
 }
 
 func (u *httpUpstream) isBreakerFailure(uerr *UpstreamError) bool {

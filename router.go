@@ -115,10 +115,10 @@ func NewRouter(routerConfigSet RouterConfigSet, log *zap.Logger) *Router {
 //
 // The final response always includes a JSON body with `data` and `errors` fields, and a `X-Request-ID` header.
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	r.metrics.IncRequestsTotal()
+
 	r.metrics.IncRequestsInFlight()
 	defer r.metrics.DecRequestsInFlight()
-
-	defer r.metrics.IncRequestsTotal()
 
 	matchedRoute := r.match(req)
 	if matchedRoute == nil {

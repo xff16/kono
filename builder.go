@@ -128,7 +128,6 @@ func initUpstreams(cfgs []UpstreamConfig) []Upstream {
 			url:                 cfg.URL,
 			method:              cfg.Method,
 			timeout:             cfg.Timeout,
-			headers:             cfg.Headers,
 			forwardHeaders:      cfg.ForwardHeaders,
 			forwardQueryStrings: cfg.ForwardQueryStrings,
 			policy:              policy,

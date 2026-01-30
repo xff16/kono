@@ -69,7 +69,6 @@ type UpstreamConfig struct {
 	URL                 string               `json:"url" yaml:"url" toml:"url" validate:"required,url"`
 	Method              string               `json:"method" yaml:"method" toml:"method" validate:"required"`
 	Timeout             time.Duration        `json:"timeout" yaml:"timeout" toml:"timeout"`
-	Headers             map[string]string    `json:"headers" yaml:"headers" toml:"headers"`
 	ForwardHeaders      []string             `json:"forward_headers" yaml:"forward_headers" toml:"forward_headers"`
 	ForwardQueryStrings []string             `json:"forward_query_strings" yaml:"forward_query_strings" toml:"forward_query_strings"`
 	Policy              UpstreamPolicyConfig `json:"policy" yaml:"policy" toml:"policy"`
