@@ -13,6 +13,11 @@ import (
 	"github.com/starwalkn/tokka/internal/logger"
 )
 
+const (
+	algGzip    = "gzip"
+	algDeflate = "deflate"
+)
+
 type Middleware struct {
 	enabled bool
 	alg     string
@@ -35,11 +40,11 @@ func (m *Middleware) Init(cfg map[string]interface{}) error {
 	if alg, ok := cfg["alg"].(string); ok {
 		alg = strings.ToLower(alg)
 
-		if alg == "gzip" || alg == "deflate" {
+		if alg == algGzip || alg == algDeflate {
 			m.alg = alg
 		}
 	} else {
-		m.alg = "gzip"
+		m.alg = algGzip
 	}
 
 	m.log = logger.New(false)
@@ -64,9 +69,9 @@ func (m *Middleware) Handler(next http.Handler) http.Handler {
 		var err error
 
 		switch m.alg {
-		case "gzip":
+		case algGzip:
 			writer = gzip.NewWriter(w)
-		case "deflate":
+		case algDeflate:
 			writer, err = flate.NewWriter(w, flate.DefaultCompression)
 			if err != nil {
 				m.log.Error("cannot create deflate writer", zap.Error(err))

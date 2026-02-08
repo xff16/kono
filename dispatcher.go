@@ -78,8 +78,6 @@ func (d *defaultDispatcher) dispatch(route *Route, original *http.Request) []Ups
 			}
 			defer sem.Release(1)
 
-			upstreamPolicy := u.Policy()
-
 			resp := u.Call(ctx, original, originalBody)
 			if resp.Err != nil {
 				d.metrics.IncFailedRequestsTotal(metric.FailReasonUpstreamError)
@@ -89,7 +87,11 @@ func (d *defaultDispatcher) dispatch(route *Route, original *http.Request) []Ups
 				)
 			}
 
-			var errs []error
+			// Handle upstream policies
+			var (
+				errs           []error
+				upstreamPolicy = u.Policy()
+			)
 
 			if upstreamPolicy.RequireBody && len(resp.Body) == 0 {
 				errs = append(errs, errors.New("empty body not allowed by upstream policy"))

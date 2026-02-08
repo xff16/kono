@@ -109,7 +109,7 @@ func (a *defaultAggregator) mergeResponses(responses []UpstreamResponse, allowPa
 			continue
 		}
 
-		// Handle JSON unmarshaling error as internal.
+		// Handle JSON unmarshaling error as internal
 		if err := json.Unmarshal(resp.Body, &obj); err != nil {
 			a.log.Warn(
 				"failed to unmarshal response",
@@ -152,7 +152,7 @@ func (a *defaultAggregator) arrayOfResponses(responses []UpstreamResponse, allow
 	var aggregationErrors []JSONError
 
 	for _, resp := range responses {
-		// Handle upstream error.
+		// Handle upstream error
 		if resp.Err != nil {
 			mapped := a.mapUpstreamError(resp.Err)
 

@@ -11,6 +11,8 @@ const (
 	PluginTypeResponse
 )
 
+// Plugin is an interface that describes the implementation of plugins for modifying the request or response.
+// Any custom plugin must implement this interface.
 type Plugin interface {
 	Info() PluginInfo
 	Init(cfg map[string]interface{})

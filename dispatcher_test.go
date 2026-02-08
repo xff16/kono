@@ -40,8 +40,8 @@ func TestDispatcher_Dispatch_Success(t *testing.T) {
 
 	route := &Route{
 		Upstreams: []Upstream{
-			&httpUpstream{hosts: []string{upstreamA.URL}, timeout: 1000 * time.Millisecond, client: http.DefaultClient},
-			&httpUpstream{hosts: []string{upstreamB.URL}, timeout: 1000 * time.Millisecond, client: http.DefaultClient},
+			&httpUpstream{hosts: []string{upstreamA.URL}, timeout: 1000 * time.Millisecond, log: zap.NewNop(), client: http.DefaultClient},
+			&httpUpstream{hosts: []string{upstreamB.URL}, timeout: 1000 * time.Millisecond, log: zap.NewNop(), client: http.DefaultClient},
 		},
 		MaxParallelUpstreams: maxParallelUpstreams,
 	}
@@ -81,6 +81,7 @@ func TestDispatcher_Dispatch_ForwardQueryAndHeaders(t *testing.T) {
 				forwardQueryStrings: []string{"foo"},
 				forwardHeaders:      []string{"X-Test"},
 				timeout:             500 * time.Millisecond,
+				log:                 zap.NewNop(),
 				client:              http.DefaultClient,
 			},
 		},
@@ -115,6 +116,7 @@ func TestDispatcher_Dispatch_PostWithBody(t *testing.T) {
 				hosts:   []string{upstreamA.URL},
 				method:  http.MethodPost,
 				timeout: 500 * time.Millisecond,
+				log:     zap.NewNop(),
 				client:  http.DefaultClient,
 			},
 		},
@@ -147,6 +149,7 @@ func TestDispatcher_Dispatch_UpstreamTimeout(t *testing.T) {
 				hosts:   []string{upstreamA.URL},
 				method:  http.MethodGet,
 				timeout: 500 * time.Millisecond,
+				log:     zap.NewNop(),
 				client:  http.DefaultClient,
 			},
 		},
@@ -183,6 +186,7 @@ func TestDispatcher_Dispatch_MapStatusCodesPolicy(t *testing.T) {
 				hosts:   []string{upstreamA.URL},
 				method:  http.MethodGet,
 				timeout: 500 * time.Millisecond,
+				log:     zap.NewNop(),
 				client:  http.DefaultClient,
 				policy: Policy{
 					MapStatusCodes: map[int]int{
@@ -234,6 +238,7 @@ func TestDispatcher_Dispatch_MaxResponseBodySizePolicy(t *testing.T) {
 				hosts:   []string{upstreamA.URL},
 				method:  http.MethodGet,
 				timeout: 500 * time.Millisecond,
+				log:     zap.NewNop(),
 				client:  http.DefaultClient,
 				policy: Policy{
 					MaxResponseBodySize: maxResponseBodySize,
@@ -285,6 +290,7 @@ func TestDispatcher_Dispatch_RequireBodyPolicy(t *testing.T) {
 				hosts:   []string{upstreamA.URL},
 				method:  http.MethodGet,
 				timeout: 500 * time.Millisecond,
+				log:     zap.NewNop(),
 				client:  http.DefaultClient,
 				policy: Policy{
 					RequireBody: true,
@@ -294,6 +300,7 @@ func TestDispatcher_Dispatch_RequireBodyPolicy(t *testing.T) {
 				hosts:   []string{upstreamB.URL},
 				method:  http.MethodGet,
 				timeout: 500 * time.Millisecond,
+				log:     zap.NewNop(),
 				client:  http.DefaultClient,
 				policy: Policy{
 					RequireBody: true,
@@ -346,6 +353,7 @@ func TestDispatcher_Dispatch_RetryPolicy(t *testing.T) {
 				hosts:   []string{upstreamA.URL},
 				method:  http.MethodGet,
 				timeout: 500 * time.Millisecond,
+				log:     zap.NewNop(),
 				client:  http.DefaultClient,
 				policy: Policy{
 					RetryPolicy: RetryPolicy{
