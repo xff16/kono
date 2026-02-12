@@ -1,4 +1,4 @@
-package tokka
+package kono
 
 type Route struct {
 	Path                 string

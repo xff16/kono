@@ -1,4 +1,4 @@
-package tokka
+package kono
 
 import (
 	"encoding/json"
@@ -75,6 +75,7 @@ type AggregationConfig struct {
 }
 
 type UpstreamConfig struct {
+	Name                string        `json:"name" yaml:"name" toml:"name"`
 	Hosts               []string      `json:"hosts" yaml:"hosts" toml:"hosts" validate:"required,hosts"`
 	Method              string        `json:"method" yaml:"method" toml:"method" validate:"required"`
 	Timeout             time.Duration `json:"timeout" yaml:"timeout" toml:"timeout"`

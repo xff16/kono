@@ -1,4 +1,4 @@
-package tokka
+package kono
 
 import (
 	"go.uber.org/zap"

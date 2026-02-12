@@ -1,4 +1,4 @@
-package tokka
+package kono
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/starwalkn/tokka/internal/metric"
+	"github.com/xff16/kono/internal/metric"
 
 	"go.uber.org/zap"
 )

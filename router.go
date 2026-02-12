@@ -1,19 +1,22 @@
-package tokka
+package kono
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/oklog/ulid/v2"
 	"go.uber.org/zap"
 
-	"github.com/starwalkn/tokka/internal/metric"
-	"github.com/starwalkn/tokka/internal/ratelimit"
+	"github.com/xff16/kono/internal/metric"
+	"github.com/xff16/kono/internal/ratelimit"
 )
 
 type Router struct {
@@ -131,10 +134,10 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		start := time.Now()
 		defer r.metrics.UpdateRequestsDuration(matchedRoute.Path, matchedRoute.Method, start)
 
-		// Tokka internal context
+		// Kono internal context
 		tctx := newContext(req)
 
-		requestID := req.Header.Get("X-Request-ID")
+		requestID := getOrCreateRequestID(req)
 
 		// Request-phase plugins
 		for _, p := range matchedRoute.Plugins {
@@ -315,4 +318,16 @@ func extractClientIP(r *http.Request) string {
 	}
 
 	return r.RemoteAddr
+}
+
+func getOrCreateRequestID(r *http.Request) string {
+	requestID := r.Header.Get("X-Request-ID")
+	if requestID != "" {
+		return requestID
+	}
+
+	t := time.Now()
+	entropy := ulid.Monotonic(rand.Reader, math.MaxInt64)
+
+	return strings.ToLower(ulid.MustNew(ulid.Timestamp(t), entropy).String())
 }

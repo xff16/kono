@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/starwalkn/tokka"
+	"github.com/xff16/kono"
 )
 
 var validateCmd = &cobra.Command{
@@ -34,10 +34,10 @@ func runValidate() error {
 		cfgPath = os.Getenv("TOKKA_CONFIG")
 	}
 	if cfgPath == "" {
-		cfgPath = "./tokka.json"
+		cfgPath = "./kono.json"
 	}
 
-	_, err := tokka.LoadConfig(cfgPath)
+	_, err := kono.LoadConfig(cfgPath)
 	if err != nil {
 		return err
 	}

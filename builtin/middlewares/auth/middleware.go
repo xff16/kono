@@ -12,7 +12,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/starwalkn/tokka"
+	"github.com/xff16/kono"
 )
 
 type ctxKeyClaims struct{}
@@ -40,7 +40,7 @@ type JWTConfig struct {
 
 const defaultLeeway = 5 * time.Second
 
-func NewMiddleware() tokka.Middleware {
+func NewMiddleware() kono.Middleware {
 	return &Middleware{}
 }
 

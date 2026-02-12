@@ -8,15 +8,15 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/starwalkn/tokka"
+	"github.com/xff16/kono"
 )
 
 type Server struct {
-	cfg *tokka.Config
+	cfg *kono.Config
 	log *zap.Logger
 }
 
-func NewServer(cfg *tokka.Config, log *zap.Logger) *Server {
+func NewServer(cfg *kono.Config, log *zap.Logger) *Server {
 	return &Server{
 		cfg: cfg,
 		log: log,

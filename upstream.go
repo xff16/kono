@@ -1,4 +1,4 @@
-package tokka
+package kono
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/starwalkn/tokka/internal/circuitbreaker"
+	"github.com/xff16/kono/internal/circuitbreaker"
 )
 
 type Upstream interface {
@@ -80,6 +80,8 @@ func (u *httpUpstream) Name() string   { return u.name }
 func (u *httpUpstream) Policy() Policy { return u.policy }
 
 func (u *httpUpstream) Call(ctx context.Context, original *http.Request, originalBody []byte) *UpstreamResponse {
+	log := u.log.With(zap.String("upstream", u.name))
+
 	resp := &UpstreamResponse{}
 
 	retryPolicy := u.policy.RetryPolicy
@@ -96,6 +98,8 @@ func (u *httpUpstream) Call(ctx context.Context, original *http.Request, origina
 		default:
 			if u.circuitBreaker != nil {
 				if allow := u.circuitBreaker.Allow(); !allow {
+					log.Error("circuit breaker deny request")
+
 					return &UpstreamResponse{
 						Err: &UpstreamError{
 							Kind: UpstreamCircuitOpen,
@@ -105,11 +109,11 @@ func (u *httpUpstream) Call(ctx context.Context, original *http.Request, origina
 				}
 			}
 
-			resp = u.call(ctx, original, originalBody)
+			resp = u.call(ctx, original, originalBody, log)
 
 			if u.circuitBreaker != nil {
 				if resp.Err != nil && u.isBreakerFailure(resp.Err) {
-					u.log.Error("upstream request failed, opening circuit breaker")
+					log.Error("upstream request failed, opening circuit breaker")
 					u.circuitBreaker.OnFailure()
 				} else {
 					u.circuitBreaker.OnSuccess()
@@ -138,7 +142,7 @@ func (u *httpUpstream) Call(ctx context.Context, original *http.Request, origina
 	return resp
 }
 
-func (u *httpUpstream) call(ctx context.Context, original *http.Request, originalBody []byte) *UpstreamResponse {
+func (u *httpUpstream) call(ctx context.Context, original *http.Request, originalBody []byte, log *zap.Logger) *UpstreamResponse {
 	uresp := &UpstreamResponse{
 		Headers: make(http.Header),
 	}
@@ -158,7 +162,7 @@ func (u *httpUpstream) call(ctx context.Context, original *http.Request, origina
 
 	hresp, err := u.client.Do(req)
 	if err != nil {
-		u.log.Error("non-successful upstream request", zap.Error(err))
+		log.Error("non-successful upstream request", zap.Error(err))
 
 		kind := UpstreamConnection
 
@@ -182,7 +186,7 @@ func (u *httpUpstream) call(ctx context.Context, original *http.Request, origina
 	uresp.Status = hresp.StatusCode
 
 	if hresp.StatusCode >= http.StatusInternalServerError {
-		u.log.Error("non-200 upstream response status code", zap.Int("status_code", hresp.StatusCode))
+		log.Error("non-200 upstream response status code", zap.Int("status_code", hresp.StatusCode))
 
 		uresp.Err = &UpstreamError{
 			Kind: UpstreamBadStatus,
@@ -196,7 +200,7 @@ func (u *httpUpstream) call(ctx context.Context, original *http.Request, origina
 
 	var reader io.Reader = hresp.Body
 	if u.policy.MaxResponseBodySize > 0 {
-		u.log.Debug("using limit reader", zap.Int64("max_response_body_size", u.policy.MaxResponseBodySize))
+		log.Debug("using limit reader", zap.Int64("max_response_body_size", u.policy.MaxResponseBodySize))
 		reader = io.LimitReader(hresp.Body, u.policy.MaxResponseBodySize+1)
 	}
 

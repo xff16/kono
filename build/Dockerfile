@@ -15,7 +15,7 @@ COPY dashboard/static/fonts ./fonts
 
 RUN npx tsc
 
-# Stage 2: Build Go tokka binary
+# Stage 2: Build Go kono binary
 FROM golang:1.25.4-bookworm AS builder
 
 WORKDIR /app
@@ -35,9 +35,9 @@ FROM debian:12-slim AS runtime
 
 WORKDIR /app
 
-COPY --from=builder /app/.bin/tokka /bin/tokka
-COPY --from=builder /app/build/plugins /tokka/plugins
-COPY --from=builder /app/build/middlewares /tokka/middlewares
+COPY --from=builder /app/.bin/kono /bin/kono
+COPY --from=builder /app/build/plugins /kono/plugins
+COPY --from=builder /app/build/middlewares /kono/middlewares
 
 COPY --from=dashboard-builder /app/dist /dashboard/static/dist
 COPY --from=dashboard-builder /app/index.html /dashboard/static/index.html
@@ -48,4 +48,4 @@ EXPOSE 7805/tcp 7806/tcp
 
 STOPSIGNAL SIGTERM
 
-CMD ["/bin/tokka", "serve"]
+CMD ["/bin/kono", "serve"]

@@ -8,8 +8,8 @@ import (
 	"github.com/VictoriaMetrics/metrics"
 	"go.uber.org/zap"
 
-	"github.com/starwalkn/tokka"
-	"github.com/starwalkn/tokka/dashboard"
+	"github.com/xff16/kono"
+	"github.com/xff16/kono/dashboard"
 )
 
 type Server struct {
@@ -17,13 +17,13 @@ type Server struct {
 	log  *zap.Logger
 }
 
-func NewServer(cfg tokka.Config, log *zap.Logger) *Server {
+func NewServer(cfg kono.Config, log *zap.Logger) *Server {
 	if cfg.Dashboard.Enabled {
 		dashboardServer := dashboard.NewServer(&cfg, log.Named("dashboard"))
 		go dashboardServer.Start()
 	}
 
-	routerConfigSet := tokka.RouterConfigSet{
+	routerConfigSet := kono.RouterConfigSet{
 		Version:     cfg.Version,
 		Routes:      cfg.Routes,
 		Middlewares: cfg.Middlewares,
@@ -31,7 +31,7 @@ func NewServer(cfg tokka.Config, log *zap.Logger) *Server {
 		Metrics:     cfg.Server.Metrics,
 	}
 
-	mainRouter := tokka.NewRouter(routerConfigSet, log.Named("router"))
+	mainRouter := kono.NewRouter(routerConfigSet, log.Named("router"))
 
 	mux := http.NewServeMux()
 

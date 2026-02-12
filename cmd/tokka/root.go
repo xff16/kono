@@ -9,8 +9,8 @@ import (
 var cfgPath string
 
 var rootCmd = &cobra.Command{
-	Use:   "tokka",
-	Short: "Tokka API Gateway",
+	Use:   "kono",
+	Short: "Kono API Gateway",
 }
 
 func Execute() {
@@ -21,6 +21,7 @@ func Execute() {
 
 func init() {
 	rootCmd.SilenceUsage = true
+
 	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	rootCmd.PersistentFlags().StringVar(
 		&cfgPath,

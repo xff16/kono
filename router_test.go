@@ -1,4 +1,4 @@
-package tokka
+package kono
 
 import (
 	"encoding/json"
@@ -13,7 +13,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/starwalkn/tokka/internal/metric"
+	"github.com/xff16/kono/internal/metric"
 )
 
 func decodeJSONResponse(t *testing.T, body []byte) JSONResponse {

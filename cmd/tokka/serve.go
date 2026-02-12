@@ -12,9 +12,9 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
-	"github.com/starwalkn/tokka"
-	"github.com/starwalkn/tokka/internal/app"
-	"github.com/starwalkn/tokka/internal/logger"
+	"github.com/xff16/kono"
+	"github.com/xff16/kono/internal/app"
+	"github.com/xff16/kono/internal/logger"
 )
 
 var serveCmd = &cobra.Command{
@@ -35,10 +35,10 @@ func runServe() error {
 		cfgPath = os.Getenv("TOKKA_CONFIG")
 	}
 	if cfgPath == "" {
-		cfgPath = "./tokka.json"
+		cfgPath = "./kono.json"
 	}
 
-	cfg, err := tokka.LoadConfig(cfgPath)
+	cfg, err := kono.LoadConfig(cfgPath)
 	if err != nil {
 		return err
 	}

@@ -8,31 +8,31 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/starwalkn/tokka"
+	"github.com/xff16/kono"
 )
 
 type Plugin struct{}
 
-func NewPlugin() tokka.Plugin {
+func NewPlugin() kono.Plugin {
 	return &Plugin{}
 }
 
-func (p *Plugin) Info() tokka.PluginInfo {
-	return tokka.PluginInfo{
+func (p *Plugin) Info() kono.PluginInfo {
+	return kono.PluginInfo{
 		Name:        "snakeify",
 		Description: "The plugin can be used to transform JSON field names in the response into the snake_case style.",
 		Version:     "v1",
-		Author:      "starwalkn",
+		Author:      "xff16",
 	}
 }
 
-func (p *Plugin) Type() tokka.PluginType {
-	return tokka.PluginTypeResponse
+func (p *Plugin) Type() kono.PluginType {
+	return kono.PluginTypeResponse
 }
 
 func (p *Plugin) Init(_ map[string]interface{}) {}
 
-func (p *Plugin) Execute(ctx tokka.Context) error {
+func (p *Plugin) Execute(ctx kono.Context) error {
 	if ctx.Response() == nil || ctx.Response().Body == nil {
 		return nil
 	}

@@ -1,4 +1,4 @@
-module github.com/starwalkn/tokka
+module github.com/xff16/kono
 
 go 1.25.4
 

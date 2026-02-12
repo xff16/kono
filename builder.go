@@ -1,4 +1,4 @@
-package tokka
+package kono
 
 import (
 	"net/http"
@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/starwalkn/tokka/internal/circuitbreaker"
-	"github.com/starwalkn/tokka/internal/metric"
+	"github.com/xff16/kono/internal/circuitbreaker"
+	"github.com/xff16/kono/internal/metric"
 )
 
 func initMinimalRouter(routesCount int, log *zap.Logger) *Router {
@@ -125,9 +125,14 @@ func initUpstreams(cfgs []UpstreamConfig) []Upstream {
 			circuitBreaker = circuitbreaker.New(policy.CircuitBreaker.MaxFailures, policy.CircuitBreaker.ResetTimeout)
 		}
 
+		name := cfg.Name
+		if name == "" {
+			makeUpstreamName(cfg.Method, cfg.Hosts)
+		}
+
 		upstream := &httpUpstream{
 			id:                  uuid.NewString(),
-			name:                makeUpstreamName(cfg.Method, cfg.Hosts),
+			name:                name,
 			hosts:               cfg.Hosts,
 			method:              cfg.Method,
 			timeout:             cfg.Timeout,
@@ -150,13 +155,13 @@ func makeUpstreamName(method string, hosts []string) string {
 	sb := strings.Builder{}
 
 	sb.WriteString(strings.ToUpper(method))
-	sb.WriteString("_")
+	sb.WriteString("-")
 
 	for i, host := range hosts {
 		sb.WriteString(host)
 
 		if i != len(hosts)-1 {
-			sb.WriteString("_")
+			sb.WriteString("-")
 		}
 	}
 

@@ -1,4 +1,4 @@
-package tokka
+package kono
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/semaphore"
 
-	"github.com/starwalkn/tokka/internal/metric"
+	"github.com/xff16/kono/internal/metric"
 )
 
 const maxBodySize = 5 << 20 // 5MB

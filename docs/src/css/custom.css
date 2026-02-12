@@ -26,7 +26,7 @@
     --ifm-background-color: hsla(50, 25%, 94%);
 
     /* Content background (lighter beige) */
-    --tokka-content-bg: hsla(50, 35%, 97%);
+    --kono-content-bg: hsla(50, 35%, 97%);
 
     --ifm-color-primary: #09820c;
     --ifm-color-primary-dark: #182f96;
@@ -86,7 +86,7 @@ article {
     position: relative;
     z-index: 2;
 
-    background: var(--tokka-content-bg);
+    background: var(--kono-content-bg);
     border-radius: 6px;
 
     padding: 3rem;
@@ -218,7 +218,7 @@ pre code {
 table {
     border-collapse: separate;
     border-spacing: 0;
-    background: var(--tokka-content-bg);
+    background: var(--kono-content-bg);
     border-radius: 6px;
     overflow: hidden;
 }
